@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7F4EC">
+<title>お品書き｜モバイルオーダー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sumi:#15120F;
+  --sumi-70:rgba(21,18,15,.66);
+  --sumi-45:rgba(21,18,15,.42);
+  --washi:#F7F4EC;
+  --washi-2:#FFFDF8;
+  --keisen:#D6CFBE;
+  --shu:#A8352A;
+  --shu-soft:rgba(168,53,42,.10);
+  --mincho:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --gothic:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--washi);
+  color:var(--sumi);
+  font-family:var(--gothic);
+  font-size:16px;
+  line-height:1.6;
+  overscroll-behavior-y:none;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--shu);outline-offset:2px}
+
+/* ---------- 見出し ---------- */
+.app-head{
+  padding:18px 20px 10px;
+  background:var(--washi);
+  border-bottom:1px solid var(--keisen);
+}
+.head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.shop{font-family:var(--mincho);font-weight:700;font-size:25px;letter-spacing:.16em;line-height:1.1}
+.shop small{display:block;font-family:var(--gothic);font-weight:400;font-size:10px;letter-spacing:.34em;color:var(--sumi-45);margin-top:7px}
+.head-right{display:flex;align-items:center;gap:9px}
+.callbtn{
+  font-family:var(--mincho);font-size:12.5px;letter-spacing:.12em;
+  border:1px solid var(--shu);color:var(--shu);background:var(--shu-soft);
+  padding:6px 11px;white-space:nowrap;
+}
+.callbtn[disabled]{border-color:var(--keisen);color:var(--sumi-45);background:none}
+.gsheet{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;padding:14px 0 8px}
+.gsheet button{border:1px solid var(--sumi);background:var(--washi-2);padding:16px 0;font-family:var(--mincho);font-size:19px}
+.gsheet button:active{background:var(--sumi);color:var(--washi)}
+.seat b{cursor:pointer}
+.callgrid{display:grid;gap:10px;padding:14px 0 6px}
+.callgrid button{
+  border:1px solid var(--sumi);padding:15px;text-align:left;
+  font-family:var(--mincho);font-size:16px;letter-spacing:.08em;background:var(--washi-2);
+}
+.callgrid button small{display:block;font-family:var(--gothic);font-size:11px;letter-spacing:.04em;color:var(--sumi-45);margin-top:3px}
+.callgrid button:active{background:var(--sumi);color:var(--washi)}
+.callgrid button:active small{color:rgba(247,244,236,.7)}
+.call-note{font-size:11.5px;color:var(--sumi-45);letter-spacing:.04em;padding-bottom:6px}
+.seat{
+  font-family:var(--mincho);font-size:12px;letter-spacing:.1em;
+  border:1px solid var(--sumi);padding:5px 9px;white-space:nowrap;
+}
+.seat b{font-size:16px;letter-spacing:.04em}
+
+/* ---------- タブ ---------- */
+.tabs-wrap{position:sticky;top:0;z-index:20;background:var(--washi)}
+.tabs-wrap::after{content:"";position:absolute;top:0;right:0;bottom:1px;width:34px;pointer-events:none;background:linear-gradient(90deg,rgba(247,244,236,0),var(--washi) 70%)}
+.tabs{
+  position:relative;
+  background:var(--washi);
+  border-bottom:1px solid var(--keisen);
+  overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tabs-inner{display:flex;gap:2px;padding:0 12px}
+.tab{
+  font-family:var(--mincho);font-size:15px;letter-spacing:.06em;
+  white-space:nowrap;padding:13px 11px 11px;color:var(--sumi-45);
+  border-bottom:2px solid transparent;
+}
+.tab[aria-selected="true"]{color:var(--sumi);border-bottom-color:var(--sumi)}
+
+/* ---------- 品書き ---------- */
+main{padding:0 0 128px}
+.sec-head{padding:26px 20px 6px}
+.sec-title{font-family:var(--mincho);font-weight:700;font-size:21px;letter-spacing:.1em;display:flex;align-items:center;gap:10px}
+.sec-title::before{content:"";width:13px;height:13px;border-radius:50%;background:var(--sumi);flex:none}
+.sec-note{font-size:11.5px;color:var(--sumi-45);letter-spacing:.06em;margin:5px 0 0 23px}
+
+.list{list-style:none;margin:0;padding:0 20px}
+.item{border-bottom:1px solid var(--keisen);padding:14px 0 13px}
+.item:first-child{border-top:1px solid var(--sumi)}
+.item-row{display:flex;gap:12px;align-items:flex-start}
+.thumb{
+  width:64px;height:64px;flex:none;object-fit:cover;
+  border:1px solid var(--keisen);background:var(--washi-2);
+}
+.item-body{flex:1;min-width:0}
+.zoom{
+  position:fixed;inset:0;z-index:55;display:none;place-items:center;padding:24px;
+  background:rgba(21,18,15,.86);
+}
+.zoom.on{display:grid}
+.zoom img{max-width:100%;max-height:70vh;object-fit:contain}
+.zoom p{color:var(--washi);font-family:var(--mincho);letter-spacing:.08em;margin:14px 0 0;text-align:center}
+.item-main{display:flex;align-items:baseline;gap:10px}
+.item-name{font-family:var(--mincho);font-size:17.5px;letter-spacing:.03em;flex:1;min-width:0}
+.item-price{font-family:var(--mincho);font-size:16px;letter-spacing:.02em;white-space:nowrap}
+.item-sub{font-size:11.5px;color:var(--sumi-45);letter-spacing:.04em;margin-top:3px}
+.flag{
+  display:inline-block;font-size:9.5px;letter-spacing:.14em;font-weight:500;
+  border:1px solid var(--sumi-45);padding:1px 5px;margin-left:7px;vertical-align:2px;color:var(--sumi-70);
+}
+.flag.rare{border-color:var(--shu);color:var(--shu)}
+
+.item.off .item-name,.item.off .item-price{color:var(--sumi-45)}
+.item.off .item-name{text-decoration:line-through;text-decoration-thickness:1px}
+.soldout{
+  display:inline-block;font-size:9.5px;letter-spacing:.14em;
+  border:1px solid var(--shu);color:var(--shu);padding:1px 5px;margin-left:7px;vertical-align:2px;
+}
+.qty{
+  display:inline-flex;align-items:center;gap:6px;margin-left:8px;
+  border:1px solid var(--shu);background:var(--shu-soft);color:var(--shu);
+  padding:3px 4px 3px 10px;border-radius:999px;
+  font-family:var(--mincho);font-size:13px;letter-spacing:.06em;
+}
+.qty button{width:26px;height:24px;font-size:16px;line-height:1;color:var(--shu);border-left:1px solid rgba(168,53,42,.35)}
+.acts{flex-wrap:wrap;row-gap:8px}
+.past-l button{border:1px solid var(--keisen);font-size:11px;letter-spacing:.08em;padding:2px 9px;margin-left:9px;color:var(--shu)}
+.acts .none{font-size:12.5px;letter-spacing:.08em;color:var(--sumi-45);padding:7px 0}
+.stk-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.stk-row label{font-size:11.5px;letter-spacing:.06em;color:var(--sumi-45)}
+.stk{
+  width:76px;font-family:var(--mincho);font-size:16px;text-align:center;
+  border:1px solid var(--sumi);background:var(--washi-2);padding:6px 4px;
+}
+.stock{
+  font-family:var(--mincho);font-size:13px;letter-spacing:.1em;
+  border:1px dashed var(--sumi-45);color:var(--sumi-70);padding:6px 14px;
+}
+.stock.back{border-style:solid;border-color:var(--shu);color:var(--shu)}
+.staffbar{
+  position:sticky;top:0;z-index:25;display:none;
+  background:var(--shu);color:var(--washi);
+  padding:9px 18px;align-items:center;justify-content:space-between;gap:10px;
+  font-size:12.5px;letter-spacing:.08em;
+}
+.staffbar.on{display:flex}
+.staffbar button{border:1px solid rgba(247,244,236,.7);padding:5px 12px;font-size:12px;letter-spacing:.1em;white-space:nowrap}
+.acts{display:flex;align-items:center;gap:8px;margin-top:10px}
+.add{
+  font-family:var(--mincho);font-size:14px;letter-spacing:.12em;
+  border:1px solid var(--sumi);padding:7px 20px;background:var(--washi-2);
+  transition:background .15s ease,color .15s ease;
+}
+.add:active{background:var(--sumi);color:var(--washi)}
+.add.taste{padding:7px 0;flex:1;text-align:center}
+.count{
+  margin-left:auto;font-family:var(--mincho);font-size:12.5px;letter-spacing:.06em;
+  color:var(--shu);background:var(--shu-soft);padding:4px 10px;border-radius:999px;
+  opacity:0;transform:translateY(2px);transition:opacity .18s ease,transform .18s ease;
+}
+.count.on{opacity:1;transform:none}
+
+/* ---------- 会計バー ---------- */
+.bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:var(--sumi);color:var(--washi);
+  padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:14px;
+  transform:translateY(102%);transition:transform .26s cubic-bezier(.22,.7,.3,1);
+}
+.bar.on{transform:none}
+.bar-sum{flex:1;min-width:0}
+.bar-lbl{font-size:10.5px;letter-spacing:.24em;color:rgba(247,244,236,.6)}
+.bar-yen{font-family:var(--mincho);font-size:23px;letter-spacing:.02em;line-height:1.25}
+.bar-btn{
+  font-family:var(--mincho);font-size:16px;letter-spacing:.16em;
+  background:var(--washi);color:var(--sumi);padding:12px 22px;
+}
+
+/* ---------- 注文票 ---------- */
+.veil{position:fixed;inset:0;z-index:40;background:rgba(21,18,15,.5);opacity:0;pointer-events:none;transition:opacity .24s ease}
+.veil.on{opacity:1;pointer-events:auto}
+.slip{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  max-height:88vh;display:flex;flex-direction:column;
+  background:var(--washi-2);
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.22,.7,.3,1);
+}
+.slip.on{transform:none}
+.slip::before{
+  content:"";display:block;height:9px;flex:none;
+  background:repeating-linear-gradient(-45deg,var(--sumi) 0 12px,transparent 12px 24px);
+  opacity:.85;
+}
+.slip-head{padding:16px 20px 10px;border-bottom:1px solid var(--sumi);display:flex;align-items:center;justify-content:space-between}
+.slip-title{font-family:var(--mincho);font-weight:700;font-size:19px;letter-spacing:.2em}
+.slip-close{font-size:13px;letter-spacing:.1em;color:var(--sumi-45)}
+.slip-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 20px 20px}
+
+.line{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px dashed var(--keisen)}
+.line-name{flex:1;min-width:0;font-family:var(--mincho);font-size:16px;letter-spacing:.02em}
+.line-name em{font-style:normal;font-family:var(--gothic);font-size:11px;color:var(--shu);letter-spacing:.1em;margin-left:6px}
+.line-yen{font-family:var(--mincho);font-size:15px;width:74px;text-align:right}
+.step{display:flex;align-items:center;border:1px solid var(--keisen)}
+.step button{width:32px;height:30px;font-size:17px;line-height:1;color:var(--sumi-70)}
+.step span{width:26px;text-align:center;font-family:var(--mincho);font-size:15px}
+
+.sub{display:flex;justify-content:space-between;font-size:13.5px;color:var(--sumi-70);padding:5px 0}
+.sub:first-of-type{padding-top:14px}
+.tot{display:flex;align-items:baseline;justify-content:space-between;padding:16px 0 4px;border-top:1px solid var(--sumi);margin-top:4px}
+.tot-l{font-family:var(--mincho);font-size:16px;letter-spacing:.16em}
+.tot-r{font-family:var(--mincho);font-size:27px}
+.tot-note{font-size:11px;color:var(--sumi-45);text-align:right;letter-spacing:.05em}
+.send{
+  width:100%;margin-top:16px;background:var(--sumi);color:var(--washi);
+  font-family:var(--mincho);font-size:17px;letter-spacing:.22em;padding:16px;
+}
+.send[disabled]{opacity:.3}
+.empty{text-align:center;padding:46px 0 40px;color:var(--sumi-45);font-family:var(--mincho);letter-spacing:.08em}
+
+.past{margin-top:26px;padding-top:16px;border-top:1px solid var(--keisen)}
+.past-h{font-family:var(--mincho);font-size:13px;letter-spacing:.18em;color:var(--sumi-45);margin-bottom:8px}
+.past-l{display:flex;justify-content:space-between;font-size:13.5px;color:var(--sumi-70);padding:3px 0}
+.call{width:100%;margin-top:12px;border:1px solid var(--sumi);padding:12px;font-family:var(--mincho);letter-spacing:.16em;font-size:14px}
+
+/* ---------- 判子 ---------- */
+.stamp{
+  position:fixed;inset:0;z-index:60;display:none;place-items:center;
+  background:rgba(247,244,236,.9);
+}
+.stamp.on{display:grid}
+.seal{
+  width:132px;height:132px;border:5px solid var(--shu);border-radius:12px;
+  display:grid;place-items:center;color:var(--shu);
+  font-family:var(--mincho);font-weight:700;font-size:44px;letter-spacing:.1em;
+  writing-mode:vertical-rl;line-height:1.05;padding:8px;
+  transform:scale(1.7) rotate(-12deg);opacity:0;
+  animation:press .5s cubic-bezier(.2,.9,.3,1) forwards;
+}
+.stamp-msg{position:absolute;bottom:34%;font-family:var(--mincho);letter-spacing:.2em;font-size:14px;opacity:0;animation:fade .4s .35s forwards}
+@keyframes press{to{transform:scale(1) rotate(-9deg);opacity:.92}}
+@keyframes fade{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  .seal{opacity:.92;transform:rotate(-9deg)}
+  .stamp-msg{opacity:1}
+}
+.fadein{animation:up .28s ease both}
+@keyframes up{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<header class="app-head">
+  <div class="head-row">
+    <div class="shop">お品書き<small>MOBILE ORDER ・ 表示は税抜</small></div>
+    <div class="head-right">
+      <button class="callbtn" id="callBtn">店員を呼ぶ</button>
+      <div class="seat">卓 <b id="seatNo">–</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="tabs-wrap"><nav class="tabs" id="tabs"><div class="tabs-inner" id="tabsInner"></div></nav></div>
+
+<main id="main"></main>
+
+<div class="bar" id="bar">
+  <div class="bar-sum">
+    <div class="bar-lbl">GOCHUMON ・ 税込</div>
+    <div class="bar-yen" id="barYen">¥0</div>
+  </div>
+  <button class="bar-btn" id="openSlip">注文票を見る</button>
+</div>
+
+<div class="veil" id="veil"></div>
+<section class="slip" id="slip" aria-label="注文票">
+  <div class="slip-head">
+    <div class="slip-title">注文票</div>
+    <button class="slip-close" id="closeSlip">閉じる ✕</button>
+  </div>
+  <div class="slip-body" id="slipBody"></div>
+</section>
+
+<section class="slip" id="callSheet" aria-label="お呼び出し">
+  <div class="slip-head">
+    <div class="slip-title">お呼び出し</div>
+    <button class="slip-close" id="closeCall">閉じる ✕</button>
+  </div>
+  <div class="slip-body">
+    <p class="call-note">メニューにない品・味の調整・アレルギーのご相談は、こちらからスタッフをお呼びください。</p>
+    <div class="callgrid" id="callGrid">
+      <button data-r="ご注文">ご注文<small>メニューにない品・数量や味の調整のご相談</small></button>
+      <button data-r="お飲み物">お飲み物のおかわり<small>おすすめもお尋ねください</small></button>
+      <button data-r="備品">取り皿・おしぼりなど</button>
+      <button data-r="お会計">お会計</button>
+      <button data-r="その他">その他のご用<small>スタッフがお伺いします</small></button>
+    </div>
+  </div>
+</section>
+
+<div class="zoom" id="zoom"><div><img id="zoomImg" alt=""><p id="zoomCap"></p></div></div>
+
+<div class="stamp" id="stamp">
+  <div class="seal" id="sealChar">承</div>
+  <div class="stamp-msg" id="stampMsg">ご注文を承りました</div>
+</div>
+
+<script>
+/* ============================================================
+   接続設定：Firebase コンソールで発行される値をここに貼る。
+   空のままなら、この端末の中だけで動く従来どおりの動作になる。
+   ============================================================ */
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCqNh9763IFrEBrs5rmqNDOqVLrRPxE4Jk",
+  authDomain:        "kabosutei-order.firebaseapp.com",
+  projectId:         "kabosutei-order",
+  storageBucket:     "kabosutei-order.firebasestorage.app",
+  messagingSenderId: "1024471410001",
+  appId:             "1:1024471410001:web:138b60ddcb939efaf61f70"
+};
+
+const ONLINE = !!FIREBASE_CONFIG.projectId;
+let db = null;
+if (ONLINE){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+}
+
+/* 卓番は QR の ?t=12 から受け取る。?staff=1 で開くと最初から店舗モード */
+const PARAMS = new URLSearchParams(location.search);
+const TABLE = (PARAMS.get('t') || '1').trim();
+const STAFF_APP = false;  // このファイルはお客様専用
+
+const MENU = [
+  { id:'niku', label:'肉刺し', note:'下町の懐かしい味を、毎日のごちそうに。', items:[
+    {n:'ササミのタタキ刺し', p:550},
+    {n:'白センマイ刺し', p:750},
+    {n:'砂ズリ刺し', p:850, uses:{sunazuri:1}},
+    {n:'鳥ももタタキ刺し', p:950, uses:{torimomo:1}},
+    {n:'黒毛和牛タン赤身刺し', p:1080, s:'厳選黒毛和牛使用'},
+    {n:'馬刺し', p:1300, s:'新鮮な馬肉をそのまま', uses:{basashi:1}}   /* 写真を付けるなら img:'photos/basashi.jpg' を足す */,
+    {n:'黒毛和牛タン霜降り刺し', p:1400, s:'希少部位', f:'数量限定', rare:true},
+    {n:'鳥ももタタキと砂ズリ刺しのセット', p:1500, f:'SET', uses:{torimomo:1, sunazuri:1}},
+    {n:'馬刺しと砂ズリ刺しのセット', p:1600, f:'SET', uses:{basashi:1, sunazuri:1}}
+  ]},
+  { id:'tori', label:'焼き鳥串', note:'炭火焼き・1本から', items:[
+    {n:'鳥ハツ', p:90},{n:'砂ずり', p:130},{n:'とりかわ', p:130, t:1},{n:'鳥レバー', p:130, t:1},
+    {n:'ぼんじり', p:180},{n:'とりもも', p:180},{n:'ミンチボール', p:130, t:1},
+    {n:'合鴨つくね', p:190, t:1},{n:'手羽先', p:210},
+    {n:'ささみ串', p:220, opts:['梅','わさび']}
+  ]},
+  { id:'buta', label:'豚・その他串', items:[
+    {n:'豚バラ', p:180},{n:'味噌豚', p:160},{n:'シロ', p:160, t:1},{n:'ウインナー', p:140},
+    {n:'ピリ辛ウインナー', p:140},{n:'アキレス', p:190},{n:'イカ', p:160},
+    {n:'ししゃも', p:160},{n:'貝柱', p:260},{n:'豚足', p:460}
+  ]},
+  { id:'gensen', label:'厳選串', items:[
+    {n:'まるちょう', p:260},{n:'上ミノ', p:260},{n:'和牛スジ', p:210},
+    {n:'和牛タン下串', p:260},{n:'黒毛和牛さがり串', p:490},{n:'上牛タン串', p:500}
+  ]},
+  { id:'yasai', label:'野菜・軟骨', items:[
+    {n:'ピーマン', p:110},{n:'しいたけ', p:170},{n:'にんにく', p:170},
+    {n:'とり軟骨', p:160},{n:'タン軟骨', p:160},{n:'赤軟骨', p:160}
+  ]},
+  { id:'maki', label:'巻き物', items:[
+    {n:'シソ巻き', p:210},{n:'おくら巻き', p:210},{n:'うずら巻き', p:210},
+    {n:'チーズ巻き', p:210},{n:'にんにくの芽巻き', p:210}
+  ]},
+  { id:'ippin', label:'一品', items:[
+    {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},
+    {n:'冷やしキューリの浅漬け', p:350},{n:'おいしいラッキョ', p:300},
+    {n:'冷やしトマト', p:350},{n:'黒豆の枝豆', p:300},{n:'冷奴', p:250}
+  ]},
+  { id:'motsu', label:'もつ鍋', note:'かぼす亭のもつ鍋　※二人前より承ります', items:[
+    {n:'もつ鍋 一人前', p:1200, s:'二人前より承ります', min:2},
+    {n:'ちゃんぽん麺', p:250},{n:'雑炊セット', p:400},{n:'豆腐（追加）', p:250}
+  ]},
+  { id:'gohan', label:'ご飯もの', items:[
+    {n:'五島うどん', p:650},{n:'五島うどん 大盛り', p:850},
+    {n:'チーズ焼きおにぎり', p:350},{n:'焼きおにぎり', p:250},
+    {n:'味噌汁', p:250},{n:'白飯', p:250}
+  ]},
+  { id:'beer', label:'ビール', items:[
+    {n:'キリン一番搾り 生（中）', p:550},{n:'キリン一番搾り 生（小）', p:500},
+    {n:'キリンラガー 瓶（中）', p:550},{n:'アサヒスーパードライ 瓶（中）', p:550},
+    {n:'アサヒドライZERO 瓶（小）', p:450, s:'ノンアルコール'}
+  ]},
+  { id:'sake', label:'日本酒・焼酎', note:'焼酎は芋・麦・米からお選びいただけます', items:[
+    {n:'剣菱', p:480},{n:'純米酒', p:480},
+    {n:'焼酎 ロック', p:450},{n:'焼酎 お湯割り', p:400},
+    {n:'焼酎 水割り', p:400},{n:'焼酎 ソーダ割り', p:480}
+  ]},
+  { id:'chuhai', label:'酎ハイ・梅酒・カクテル', items:[
+    {n:'酎ハイ カルピス', p:450},{n:'酎ハイ レモン', p:450},
+    {n:'酎ハイ ライム', p:450},{n:'酎ハイ かぼす', p:450},
+    {n:'ウーロンハイ', p:480},
+    {n:'梅酒 ロック', p:450},{n:'梅酒 ソーダ割り', p:480},
+    {n:'カシスオレンジ', p:500},{n:'カシスウーロン', p:500},{n:'カシスかぼす', p:500},
+    {n:'ハイボール', p:500},{n:'赤ワイン グラス', p:450}
+  ]},
+  { id:'soft', label:'ソフトドリンク', items:[
+    {n:'かぼすジュース', p:280},{n:'コーラ', p:250},{n:'ラムネ', p:250},
+    {n:'カルピス', p:250},{n:'ウーロン茶', p:250},{n:'オレンジ', p:250}
+  ]},
+  { id:'bottle', label:'ボトルキープ', note:'キープ期間 3ヶ月', items:[
+    {n:'黒霧島', p:2300},{n:'黒島美人', p:2500},{n:'島美人', p:2500},
+    {n:'二階堂', p:2500},{n:'白岳しろ', p:2500},{n:'赤霧島', p:2900}
+  ]}
+];
+
+let current = MENU[0].id;
+let staff = STAFF_APP;   // スタッフ用URLなら最初から店舗モード
+const soldOut = new Set();   // 手動で提供終了にした品
+const stock = new Map();     // 本日の在庫数（未設定＝無制限）
+function saveStock(){
+  if (!ONLINE) return;
+  db.collection('state').doc('stock')
+    .set({counts:Object.fromEntries(stock), soldOut:[...soldOut]})
+    .catch(err => console.error('在庫の保存に失敗', err));
+}
+/* 共通在庫（素材）の名前。セットと単品で1つの台数を分け合う */
+const POOL_LABEL = {sunazuri:'砂ズリ（共通）', torimomo:'鳥もも（共通）', basashi:'馬刺し（共通）'};
+const USES = {};
+MENU.forEach(c => c.items.forEach((it, i) => { if (it.uses) USES[`${c.id}-${i}`] = it.uses; }));
+
+function usesOf(key){ return USES[key] || {[key]:1}; }              // 何をいくつ使うか
+function reserved(sk){                                              // 注文票で押さえている分
+  return cart.reduce((s,l) => s + (usesOf(l.base)[sk] || 0) * l.qty, 0);
+}
+function poolLeft(sk){ return stock.has(sk) ? Math.max(0, stock.get(sk) - reserved(sk)) : Infinity; }
+function remaining(key){
+  const u = usesOf(key);
+  return Math.min(...Object.entries(u).map(([sk,n]) =>
+    poolLeft(sk) === Infinity ? Infinity : Math.floor(poolLeft(sk) / n)));
+}
+function isOut(key){ return soldOut.has(key) || remaining(key) <= 0; }
+let cart = [];      // {key, name, taste, price, qty}
+let ordered = [];   // {name, taste, qty}
+
+const yen = n => '¥' + n.toLocaleString('ja-JP');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $ = id => document.getElementById(id);
+
+/* タブ */
+function visibleCats(){ return MENU.filter(c => !c.staffOnly || staff); }
+function renderTabs(){
+  if (!visibleCats().some(c => c.id === current)) current = MENU[0].id;
+  $('tabsInner').innerHTML = visibleCats().map(c =>
+    `<button class="tab" role="tab" data-cat="${c.id}" aria-selected="${c.id===current}">${c.label}</button>`
+  ).join('');
+}
+renderTabs();
+$('tabsInner').addEventListener('click', e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  current = b.dataset.cat;
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.cat === current));
+  b.scrollIntoView({inline:'center', block:'nearest', behavior:'smooth'});
+  renderMenu(true);
+  window.scrollTo({top:0, behavior:'instant'});
+});
+
+/* 品書き */
+function renderMenu(animate){
+  const c = MENU.find(x => x.id === current);
+  const fx = animate ? ' fadein' : '';
+  $('main').innerHTML = `
+    <div class="sec-head${fx}">
+      <h2 class="sec-title">${c.label}</h2>
+      ${c.note ? `<p class="sec-note">${c.note}</p>` : ''}
+    </div>
+    <ul class="list${fx}">${c.items.map((it,i) => row(c,it,i)).join('')}</ul>`;
+  syncCounts();
+}
+function row(c, it, i){
+  const key = `${c.id}-${i}`;
+  const out = isOut(key);
+  const flag = (it.f ? `<span class="flag${it.rare?' rare':''}">${it.f}</span>` : '')
+             + (out ? '<span class="soldout">本日終了</span>' : '');
+
+  // 注文ボタン（品切れ時は表示しない）
+  const choices = it.opts || (it.t ? ['タレ','塩'] : null);
+  const acts = out
+    ? `<div class="acts"><span class="none">申し訳ありません、本日分は終了しました</span></div>`
+    : `<div class="acts">${
+        choices
+          ? choices.map(o => `<button class="add taste" data-cat="${c.id}" data-i="${i}" data-taste="${o}">${o}</button>`).join('')
+          : `<button class="add" data-cat="${c.id}" data-i="${i}">＋ 追加</button>`
+      }${cart.filter(l => l.base === key).map(l => `
+        <span class="qty">${l.taste ? l.taste + ' ' : ''}${l.qty}<button class="minus" data-k="${l.key}" aria-label="1つ減らす">−</button></span>`).join('')}</div>`;
+
+  // 店舗モードでは在庫の操作欄も一緒に出す
+  const stkRow = staff ? Object.keys(usesOf(key)).map(sk => {
+    const v = stock.has(sk) ? stock.get(sk) : '';
+    return `<div class="stk-row">
+      <label for="stk-${sk}-${key}">${POOL_LABEL[sk] || '本日の在庫'}</label>
+      <input class="stk" id="stk-${sk}-${key}" type="number" inputmode="numeric" min="0" placeholder="無制限" value="${v}" data-key="${sk}">
+    </div>`;
+  }).join('') + `
+    <div class="stk-row">
+      <button class="stock${soldOut.has(key) ? ' back' : ''}" data-key="${key}">${soldOut.has(key) ? '販売を再開する' : '提供終了にする'}</button>
+    </div>` : '';
+
+  const photo = it.img
+    ? `<img class="thumb" src="${it.img}" alt="${esc(it.n)}" loading="lazy" data-zoom="${it.img}" data-cap="${esc(it.n)}">`
+    : '';
+  return `<li class="item${out ? ' off' : ''}">
+    <div class="item-row">
+      ${photo}
+      <div class="item-body">
+        <div class="item-main">
+          <div class="item-name">${esc(it.n)}${flag}</div>
+          <div class="item-price">${yen(it.p)}</div>
+        </div>
+        ${it.s ? `<div class="item-sub">${esc(it.s)}</div>` : ''}
+        ${acts}
+      </div>
+    </div>
+    ${stkRow}
+  </li>`;
+}
+
+/* 在庫数の入力 */
+$('main').addEventListener('change', e => {
+  const inp = e.target.closest('.stk'); if (!inp) return;
+  const k = inp.dataset.key;
+  const v = inp.value.trim();
+  if (v === '' || isNaN(+v)) stock.delete(k);
+  else stock.set(k, Math.max(0, Math.floor(+v)));
+  saveStock();
+  renderMenu(false);
+});
+
+/* 追加 / 在庫操作 */
+$('main').addEventListener('click', e => {
+  const sk = e.target.closest('.stock');
+  if (sk){
+    const k = sk.dataset.key;
+    if (soldOut.has(k)) soldOut.delete(k);
+    else {
+      soldOut.add(k);
+      cart = cart.filter(l => l.base !== k);   // 注文票からも外す
+    }
+    saveStock();
+    update();
+    return;
+  }
+  const m = e.target.closest('.minus');
+  if (m){
+    const l = cart.find(x => x.key === m.dataset.k);
+    if (l){
+      l.qty--;
+      if (l.qty < (l.min || 1)) cart = cart.filter(x => x.key !== l.key);
+      update();
+    }
+    return;
+  }
+  const th = e.target.closest('[data-zoom]');
+  if (th){
+    $('zoomImg').src = th.dataset.zoom;
+    $('zoomImg').alt = th.dataset.cap;
+    $('zoomCap').textContent = th.dataset.cap;
+    $('zoom').classList.add('on');
+    return;
+  }
+  const b = e.target.closest('.add'); if (!b) return;
+  const c = MENU.find(x => x.id === b.dataset.cat);
+  const it = c.items[+b.dataset.i];
+  const base = `${c.id}-${b.dataset.i}`;
+  const need = it.min || 1;
+  if (isOut(base) || remaining(base) < need){
+    showStamp('了', '本日分は終了しました');
+    renderMenu(false);
+    return;
+  }
+  const taste = b.dataset.taste || '';
+  const key = `${base}${taste ? '-' + taste : ''}`;
+  const line = cart.find(l => l.key === key);
+  if (line) line.qty++;
+  else cart.push({key, base:`${c.id}-${b.dataset.i}`, name:it.n, taste, price:it.p, qty:it.min || 1, min:it.min || 1});
+  update();
+});
+
+/* 合計・件数の反映 */
+const TAX = 0.10;
+function subtotal(){ return cart.reduce((s,l) => s + l.price * l.qty, 0); }        // 今回の注文（税抜）
+function orderedSub(){ return ordered.reduce((s,o) => s + (o.price || 0) * o.qty, 0); }
+function billSub(){ return subtotal() + orderedSub(); }                            // 卓の累計（税抜）
+function payable(n){ return Math.floor(n * (1 + TAX) / 10) * 10; }                 // 税込・10円未満切り捨て
+function syncCounts(){
+  document.querySelectorAll('.count').forEach(el => {
+    const n = cart.filter(l => l.base === el.dataset.key).reduce((s,l) => s + l.qty, 0);
+    el.textContent = n ? `注文票に ${n}` : '';
+    el.classList.toggle('on', n > 0);
+  });
+}
+function update(){
+  renderMenu(false);
+  $('barYen').textContent = yen(payable(billSub()));
+  $('bar').classList.toggle('on', cart.length > 0 || ordered.length > 0);
+  if ($('slip').classList.contains('on')) renderSlip();
+}
+
+async function cancelLine(idx){
+  const o = ordered[idx];
+  if (!o) return;
+
+  if (ONLINE && o._doc != null){
+    try{
+      const ref = db.collection('orders').doc(o._doc);
+      const snap = await ref.get();
+      const items = (snap.data().items || []).map(x => ({...x}));
+      if (items[o._i]) items[o._i].qty--;
+      const rest = items.filter(x => x.qty > 0);
+      await ref.set({items:rest, open: rest.length > 0}, {merge:true});
+      if (o.base){
+        Object.entries(usesOf(o.base)).forEach(([sk,n]) => { if (stock.has(sk)) stock.set(sk, stock.get(sk) + n); });
+        saveStock();
+      }
+    }catch(err){ console.error('取消に失敗', err); }
+    return;
+  }
+
+  o.qty--;
+  if (o.base) Object.entries(usesOf(o.base)).forEach(([sk,n]) => { if (stock.has(sk)) stock.set(sk, stock.get(sk) + n); });
+  if (o.qty <= 0) ordered.splice(idx, 1);
+  update();
+  renderSlip();
+}
+
+function totals(){
+  const rows = [];
+  if (cart.length && ordered.length){
+    rows.push(`<div class="sub"><span>今回のご注文</span><span>${yen(subtotal())}</span></div>`);
+    rows.push(`<div class="sub"><span>ご注文済み</span><span>${yen(orderedSub())}</span></div>`);
+  }
+  rows.push(`<div class="sub"><span>小計（税抜）</span><span>${yen(billSub())}</span></div>`);
+  rows.push(`<div class="sub"><span>消費税 10%</span><span>${yen(payable(billSub()) - billSub())}</span></div>`);
+  return `${rows.join('')}
+    <div class="tot"><div class="tot-l">お 会 計</div><div class="tot-r">${yen(payable(billSub()))}</div></div>
+    <div class="tot-note">表示価格は税抜　お会計は10円未満を切り捨て</div>`;
+}
+
+/* 注文票 */
+function renderSlip(){
+  const lines = cart.map(l => `
+    <div class="line">
+      <div class="line-name">${esc(l.name)}${l.taste ? `<em>${l.taste}</em>` : ''}</div>
+      <div class="step">
+        <button data-k="${l.key}" data-d="-1" aria-label="減らす">−</button>
+        <span>${l.qty}</span>
+        <button data-k="${l.key}" data-d="1" aria-label="増やす">＋</button>
+      </div>
+      <div class="line-yen">${yen(l.price * l.qty)}</div>
+    </div>`).join('');
+
+  const past = ordered.length ? `
+    <div class="past">
+      <div class="past-h">注 文 済 み</div>
+      ${ordered.map((o, i) => `<div class="past-l"><span>${esc(o.name)}${o.taste ? ' ・' + o.taste : ''} × ${o.qty}${staff ? `<button class="cancel" data-o="${i}">取消 −1</button>` : ''}</span><span>${yen((o.price || 0) * o.qty)}</span></div>`).join('')}
+      <button class="call" id="callStaff">お会計をお願いする</button>
+    </div>` : '';
+
+  $('slipBody').innerHTML = cart.length ? `
+    ${lines}
+    ${totals()}
+    <button class="send" id="send">この内容で注文する</button>
+    ${past}
+    <button class="call" id="callStaff2">お会計をお願いする</button>` : `
+    <div class="empty">注文票はまだ空です</div>
+    ${past}
+    ${ordered.length ? totals() : ''}
+    <button class="call" id="callStaff2">お会計をお願いする</button>`;
+}
+
+$('slipBody').addEventListener('click', e => {
+  const s = e.target.closest('.step button');
+  if (s){
+    const l = cart.find(x => x.key === s.dataset.k);
+    const d = +s.dataset.d;
+    if (d > 0 && remaining(l.base) <= 0){ showStamp('了', '本日分は終了しました'); return; }
+    l.qty += d;
+    if (l.qty < (l.min || 1)) cart = cart.filter(x => x.key !== l.key);
+    update();
+    return;
+  }
+  const cx = e.target.closest('.cancel');
+  if (cx){ cancelLine(+cx.dataset.o); return; }
+  if (e.target.id === 'send') sendOrder();
+  if (e.target.id === 'callStaff' || e.target.id === 'callStaff2') requestCall('お会計');
+});
+
+function sendOrder(){
+  if (!cart.length) return;
+  const items = cart.map(l => ({name:l.name, taste:l.taste, base:l.base, price:l.price, qty:l.qty}));
+
+  if (ONLINE){
+    db.collection('orders').add({
+      table: TABLE, items,
+      open: true, done: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      at: Date.now()
+    }).catch(err => { console.error(err); showStamp('×', '通信に失敗しました'); });
+
+    // 在庫を減らす（同時注文でもずれないよう取引で処理）
+    db.runTransaction(async tx => {
+      const ref = db.collection('state').doc('stock');
+      const snap = await tx.get(ref);
+      const v = snap.data() || {};
+      const counts = {...(v.counts || {})};
+      items.forEach(it => Object.entries(usesOf(it.base)).forEach(([sk,n]) => {
+        if (counts[sk] != null) counts[sk] = Math.max(0, counts[sk] - n * it.qty);
+      }));
+      tx.set(ref, {counts, soldOut: v.soldOut || []}, {merge:true});
+    }).catch(err => console.error('在庫の更新に失敗', err));
+  } else {
+    items.forEach(it => {
+      Object.entries(usesOf(it.base)).forEach(([sk,n]) => {
+        if (stock.has(sk)) stock.set(sk, Math.max(0, stock.get(sk) - n * it.qty));
+      });
+      const hit = ordered.find(o => o.name === it.name && o.taste === it.taste);
+      if (hit) hit.qty += it.qty; else ordered.push({...it});
+    });
+  }
+
+  cart = [];
+  closeSlip();
+  showStamp('承', 'ご注文を承りました');
+  setTimeout(update, 1500);
+}
+
+function showStamp(ch, msg){
+  $('sealChar').textContent = ch;
+  $('stampMsg').textContent = msg;
+  const st = $('stamp');
+  st.classList.remove('on'); void st.offsetWidth;
+  st.classList.add('on');
+  setTimeout(() => st.classList.remove('on'), 1500);
+}
+
+/* 店員呼び出し */
+let calling = false;
+function requestCall(reason){
+  if (calling) return;
+  calling = true;
+  closeAll();
+  if (ONLINE){
+    db.collection('calls').add({
+      table: TABLE, reason, done: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      at: Date.now()
+    }).catch(err => console.error('呼び出しに失敗', err));
+  }
+  showStamp('呼', `${reason}の件でお伺いします`);
+  const b = $('callBtn');
+  let left = 30;
+  b.disabled = true;
+  b.textContent = '呼び出し中';
+  const tick = setInterval(() => {
+    left--;
+    if (left <= 0){
+      clearInterval(tick);
+      calling = false;
+      b.disabled = false;
+      b.textContent = '店員を呼ぶ';
+    }
+  }, 1000);
+}
+$('callBtn').addEventListener('click', () => {
+  closeSlip();
+  $('callSheet').classList.add('on');
+  $('veil').classList.add('on');
+});
+$('closeCall').addEventListener('click', closeAll);
+$('callGrid').addEventListener('click', e => {
+  const b = e.target.closest('button[data-r]');
+  if (b) requestCall(b.dataset.r);
+});
+
+/* 開閉 */
+function openSlip(){ renderSlip(); $('slip').classList.add('on'); $('veil').classList.add('on'); }
+function closeSlip(){ $('slip').classList.remove('on'); $('veil').classList.remove('on'); }
+function closeAll(){ ['slip','callSheet'].forEach(k => $(k).classList.remove('on')); $('veil').classList.remove('on'); }
+$('openSlip').addEventListener('click', openSlip);
+$('closeSlip').addEventListener('click', closeSlip);
+$('veil').addEventListener('click', closeAll);
+$('zoom').addEventListener('click', () => $('zoom').classList.remove('on'));
+
+renderTabs();
+renderMenu(true);
+update();
+
+/* ===================== ここから通信 ===================== */
+$('seatNo').textContent = TABLE;
+
+if (ONLINE){
+  // 在庫と提供終了：全端末で共有
+  db.collection('state').doc('stock').onSnapshot(d => {
+    const v = d.data() || {};
+    stock.clear();
+    Object.entries(v.counts || {}).forEach(([k,n]) => stock.set(k, n));
+    soldOut.clear();
+    (v.soldOut || []).forEach(k => soldOut.add(k));
+    update();
+  }, err => console.error('在庫の受信に失敗', err));
+
+  // この卓の注文済み
+  db.collection('orders').where('table','==',TABLE).where('open','==',true)
+    .onSnapshot(snap => {
+      ordered = [];
+      snap.forEach(d => (d.data().items || []).forEach((it, i) =>
+        ordered.push({...it, _doc:d.id, _i:i})));
+      update();
+    }, err => console.error('注文の受信に失敗', err));
+
+}
+
+
+
+
+</script>
+</body>
+</html>
