@@ -35,6 +35,11 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 :focus-visible{outline:2px solid var(--shu);outline-offset:2px}
 
 /* ---------- 見出し ---------- */
+.cash-bar{
+  background:var(--shu-soft);border-bottom:1px solid var(--keisen);
+  padding:9px 20px;text-align:center;
+  font-family:var(--mincho);font-size:13px;letter-spacing:.1em;color:var(--shu);
+}
 .app-head{
   padding:18px 20px 10px;
   background:var(--washi);
@@ -275,6 +280,8 @@ main{padding:0 0 128px}
   </div>
 </header>
 
+<div class="cash-bar">お支払いは現金のみとなります</div>
+
 <div class="tabs-wrap"><nav class="tabs" id="tabs"><div class="tabs-inner" id="tabsInner"></div></nav></div>
 
 <main id="main"></main>
@@ -334,11 +341,19 @@ const FIREBASE_CONFIG = {
   appId:             "1:1024471410001:web:138b60ddcb939efaf61f70"
 };
 
-const ONLINE = !!FIREBASE_CONFIG.projectId;
+let ONLINE = !!FIREBASE_CONFIG.projectId;
 let db = null;
 if (ONLINE){
-  firebase.initializeApp(FIREBASE_CONFIG);
-  db = firebase.firestore();
+  try{
+    if (typeof firebase === 'undefined') throw new Error('Firebase SDK を読み込めません');
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+  }catch(err){
+    // 通信できないときも品書きだけは開けるようにする
+    console.error('Firebase に接続できません', err);
+    ONLINE = false;
+    db = null;
+  }
 }
 
 /* 卓番は QR の ?t=12 から受け取る。?staff=1 で開くと最初から店舗モード */
@@ -354,7 +369,7 @@ const MENU = [
     {n:'鳥ももタタキ刺し', p:950, uses:{torimomo:1}},
     {n:'黒毛和牛タン赤身刺し', p:1080, s:'厳選黒毛和牛使用'},
     {n:'馬刺し', p:1300, s:'新鮮な馬肉をそのまま', uses:{basashi:1}}   /* 写真を付けるなら img:'photos/basashi.jpg' を足す */,
-    {n:'黒毛和牛タン霜降り刺し', p:1400, s:'希少部位', f:'数量限定', rare:true},
+    {n:'和牛上タン刺し', p:1400, s:'希少部位', f:'数量限定', rare:true},
     {n:'鳥ももタタキと砂ズリ刺しのセット', p:1500, f:'SET', uses:{torimomo:1, sunazuri:1}},
     {n:'馬刺しと砂ズリ刺しのセット', p:1600, f:'SET', uses:{basashi:1, sunazuri:1}}
   ]},
@@ -652,7 +667,8 @@ function totals(){
   rows.push(`<div class="sub"><span>消費税 10%</span><span>${yen(payable(billSub()) - billSub())}</span></div>`);
   return `${rows.join('')}
     <div class="tot"><div class="tot-l">お 会 計</div><div class="tot-r">${yen(payable(billSub()))}</div></div>
-    <div class="tot-note">表示価格は税抜　お会計は10円未満を切り捨て</div>`;
+    <div class="tot-note">表示価格は税抜　お会計は10円未満を切り捨て</div>
+    <div class="tot-note" style="color:var(--shu);font-size:12.5px;margin-top:6px">お支払いは現金のみとなります</div>`;
 }
 
 /* 注文票 */
