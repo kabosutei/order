@@ -7,12 +7,12 @@
 <title>お品書き｜モバイルオーダー</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --sumi:#15120F;
-  --sumi-70:rgba(21,18,15,.66);
-  --sumi-45:rgba(21,18,15,.42);
+  --sumi:#0C0A08;
+  --sumi-70:rgba(12,10,8,.82);
+  --sumi-45:rgba(12,10,8,.62);
   --washi:#F7F4EC;
   --washi-2:#FFFDF8;
   --keisen:#D6CFBE;
@@ -88,7 +88,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .tabs::-webkit-scrollbar{display:none}
 .tabs-inner{display:flex;gap:2px;padding:0 12px}
 .tab{
-  font-family:var(--mincho);font-size:15px;letter-spacing:.06em;
+  font-family:var(--mincho);font-weight:700;font-size:16.5px;letter-spacing:.06em;
   white-space:nowrap;padding:13px 11px 11px;color:var(--sumi-45);
   border-bottom:2px solid transparent;
 }
@@ -99,7 +99,7 @@ main{padding:0 0 128px}
 .sec-head{padding:26px 20px 6px}
 .sec-title{font-family:var(--mincho);font-weight:700;font-size:21px;letter-spacing:.1em;display:flex;align-items:center;gap:10px}
 .sec-title::before{content:"";width:13px;height:13px;border-radius:50%;background:var(--sumi);flex:none}
-.sec-note{font-size:11.5px;color:var(--sumi-45);letter-spacing:.06em;margin:5px 0 0 23px}
+.sec-note{font-size:13px;font-weight:500;color:var(--sumi-45);letter-spacing:.06em;margin:5px 0 0 23px}
 
 .list{list-style:none;margin:0;padding:0 20px}
 .item{border-bottom:1px solid var(--keisen);padding:14px 0 13px}
@@ -118,9 +118,9 @@ main{padding:0 0 128px}
 .zoom img{max-width:100%;max-height:70vh;object-fit:contain}
 .zoom p{color:var(--washi);font-family:var(--mincho);letter-spacing:.08em;margin:14px 0 0;text-align:center}
 .item-main{display:flex;align-items:baseline;gap:10px}
-.item-name{font-family:var(--mincho);font-size:17.5px;letter-spacing:.03em;flex:1;min-width:0}
-.item-price{font-family:var(--mincho);font-size:16px;letter-spacing:.02em;white-space:nowrap}
-.item-sub{font-size:11.5px;color:var(--sumi-45);letter-spacing:.04em;margin-top:3px}
+.item-name{font-family:var(--mincho);font-weight:700;font-size:19.5px;letter-spacing:.03em;flex:1;min-width:0}
+.item-price{font-family:var(--mincho);font-weight:700;font-size:18px;letter-spacing:.02em;white-space:nowrap}
+.item-sub{font-size:13px;font-weight:500;color:var(--sumi-45);letter-spacing:.04em;margin-top:3px}
 .flag{
   display:inline-block;font-size:9.5px;letter-spacing:.14em;font-weight:500;
   border:1px solid var(--sumi-45);padding:1px 5px;margin-left:7px;vertical-align:2px;color:var(--sumi-70);
@@ -164,7 +164,7 @@ main{padding:0 0 128px}
 .staffbar button{border:1px solid rgba(247,244,236,.7);padding:5px 12px;font-size:12px;letter-spacing:.1em;white-space:nowrap}
 .acts{display:flex;align-items:center;gap:8px;margin-top:10px}
 .add{
-  font-family:var(--mincho);font-size:14px;letter-spacing:.12em;
+  font-family:var(--mincho);font-weight:700;font-size:15.5px;letter-spacing:.12em;
   border:1px solid var(--sumi);padding:7px 20px;background:var(--washi-2);
   transition:background .15s ease,color .15s ease;
 }
@@ -188,9 +188,9 @@ main{padding:0 0 128px}
 .bar.on{transform:none}
 .bar-sum{flex:1;min-width:0}
 .bar-lbl{font-size:10.5px;letter-spacing:.24em;color:rgba(247,244,236,.6)}
-.bar-yen{font-family:var(--mincho);font-size:23px;letter-spacing:.02em;line-height:1.25}
+.bar-yen{font-family:var(--mincho);font-weight:700;font-size:25px;letter-spacing:.02em;line-height:1.25}
 .bar-btn{
-  font-family:var(--mincho);font-size:16px;letter-spacing:.16em;
+  font-family:var(--mincho);font-weight:700;font-size:17px;letter-spacing:.16em;
   background:var(--washi);color:var(--sumi);padding:12px 22px;
 }
 
@@ -215,19 +215,19 @@ main{padding:0 0 128px}
 .slip-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 20px 20px}
 
 .line{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px dashed var(--keisen)}
-.line-name{flex:1;min-width:0;font-family:var(--mincho);font-size:16px;letter-spacing:.02em}
+.line-name{flex:1;min-width:0;font-family:var(--mincho);font-weight:700;font-size:17.5px;letter-spacing:.02em}
 .line-name em{font-style:normal;font-family:var(--gothic);font-size:11px;color:var(--shu);letter-spacing:.1em;margin-left:6px}
-.line-yen{font-family:var(--mincho);font-size:15px;width:74px;text-align:right}
+.line-yen{font-family:var(--mincho);font-weight:700;font-size:16.5px;width:74px;text-align:right}
 .step{display:flex;align-items:center;border:1px solid var(--keisen)}
 .step button{width:32px;height:30px;font-size:17px;line-height:1;color:var(--sumi-70)}
 .step span{width:26px;text-align:center;font-family:var(--mincho);font-size:15px}
 
-.sub{display:flex;justify-content:space-between;font-size:13.5px;color:var(--sumi-70);padding:5px 0}
+.sub{display:flex;justify-content:space-between;font-size:15px;font-weight:500;color:var(--sumi-70);padding:5px 0}
 .sub:first-of-type{padding-top:14px}
 .tot{display:flex;align-items:baseline;justify-content:space-between;padding:16px 0 4px;border-top:1px solid var(--sumi);margin-top:4px}
 .tot-l{font-family:var(--mincho);font-size:16px;letter-spacing:.16em}
 .tot-r{font-family:var(--mincho);font-size:27px}
-.tot-note{font-size:11px;color:var(--sumi-45);text-align:right;letter-spacing:.05em}
+.tot-note{font-size:12.5px;font-weight:500;color:var(--sumi-45);text-align:right;letter-spacing:.05em}
 .send{
   width:100%;margin-top:16px;background:var(--sumi);color:var(--washi);
   font-family:var(--mincho);font-size:17px;letter-spacing:.22em;padding:16px;
@@ -237,7 +237,7 @@ main{padding:0 0 128px}
 
 .past{margin-top:26px;padding-top:16px;border-top:1px solid var(--keisen)}
 .past-h{font-family:var(--mincho);font-size:13px;letter-spacing:.18em;color:var(--sumi-45);margin-bottom:8px}
-.past-l{display:flex;justify-content:space-between;font-size:13.5px;color:var(--sumi-70);padding:3px 0}
+.past-l{display:flex;justify-content:space-between;font-size:15px;font-weight:500;color:var(--sumi-70);padding:3px 0}
 .call{width:100%;margin-top:12px;border:1px solid var(--sumi);padding:12px;font-family:var(--mincho);letter-spacing:.16em;font-size:14px}
 
 /* ---------- 判子 ---------- */
@@ -415,18 +415,20 @@ const MENU = [
     {n:'キリンラガー 瓶（中）', p:550},{n:'アサヒスーパードライ 瓶（中）', p:550},
     {n:'アサヒドライZERO 瓶（小）', p:450, s:'ノンアルコール'}
   ]},
-  { id:'sake', label:'日本酒・焼酎', note:'焼酎は芋・麦・米からお選びいただけます', items:[
+  { id:'sake', label:'日本酒・焼酎', note:'焼酎は 黒霧島（芋）・島美人（芋）・白岳しろ（米）・二階堂（麦）からお選びいただけます', items:[
     {n:'剣菱', p:480},{n:'純米酒', p:480},
-    {n:'焼酎 ロック', p:450},{n:'焼酎 お湯割り', p:400},
-    {n:'焼酎 水割り', p:400},{n:'焼酎 ソーダ割り', p:480}
+    {n:'焼酎 ロック', p:450, s:'銘柄をお選びください', opts:['黒霧島','島美人','白岳しろ','二階堂']},
+    {n:'焼酎 水割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
+    {n:'焼酎 お湯割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
+    {n:'焼酎 ソーダ割り', p:480, opts:['黒霧島','島美人','白岳しろ','二階堂']}
   ]},
   { id:'chuhai', label:'酎ハイ・梅酒・カクテル', items:[
     {n:'酎ハイ カルピス', p:450},{n:'酎ハイ レモン', p:450},
     {n:'酎ハイ ライム', p:450},{n:'酎ハイ かぼす', p:450},
-    {n:'ウーロンハイ', p:480},
+    {n:'ウーロンハイ', p:480, s:'二階堂（麦）'},
     {n:'梅酒 ロック', p:450},{n:'梅酒 ソーダ割り', p:480},
     {n:'カシスオレンジ', p:500},{n:'カシスウーロン', p:500},{n:'カシスかぼす', p:500},
-    {n:'ハイボール', p:500},{n:'赤ワイン グラス', p:450}
+    {n:'ハイボール', p:500, s:'ジムビーム'},{n:'赤ワイン グラス', p:450}
   ]},
   { id:'soft', label:'ソフトドリンク', items:[
     {n:'かぼすジュース', p:280},{n:'コーラ', p:250},{n:'ラムネ', p:250},
