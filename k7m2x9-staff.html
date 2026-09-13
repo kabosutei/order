@@ -64,10 +64,11 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .callgrid button:active small{color:rgba(247,244,236,.7)}
 .call-note{font-size:11.5px;color:var(--sumi-45);letter-spacing:.04em;padding-bottom:6px}
 .seat{
-  font-family:var(--mincho);font-size:12px;letter-spacing:.1em;
-  border:1px solid var(--sumi);padding:5px 9px;white-space:nowrap;
+  font-family:var(--mincho);font-weight:700;font-size:12.5px;letter-spacing:.1em;
+  border:2px solid var(--shu);color:var(--shu);background:var(--shu-soft);
+  padding:5px 10px;white-space:nowrap;
 }
-.seat b{font-size:16px;letter-spacing:.04em}
+.seat b{font-size:20px;letter-spacing:.04em}
 
 /* ---------- タブ ---------- */
 .tabs-wrap{position:sticky;top:0;z-index:20;background:var(--washi)}
@@ -148,6 +149,21 @@ main{padding:0 0 128px}
 }
 .staffbar.on{display:flex}
 .staffbar{flex-wrap:wrap;row-gap:6px}
+.takubar{
+  position:sticky;top:0;z-index:24;display:none;
+  background:var(--washi-2);border-bottom:1px solid var(--keisen);
+  padding:9px 12px;gap:7px;overflow-x:auto;scrollbar-width:none;
+}
+.takubar.on{display:flex}
+.takubar::-webkit-scrollbar{display:none}
+.takubar .lbl{font-size:14px;font-weight:700;color:var(--sumi-45);align-self:center;white-space:nowrap;padding-right:4px}
+.takubar button{
+  font-family:var(--mincho);font-weight:700;font-size:20px;
+  border:1px solid var(--keisen);padding:8px 16px;white-space:nowrap;color:var(--sumi-70);
+}
+.takubar button.on{background:var(--shu);color:#fff;border-color:var(--shu)}
+.takubar{background:var(--shu-soft);border-bottom:1.5px solid var(--shu)}
+.takubar .lbl{color:var(--shu);font-weight:700}
 .staffbar button{border:1px solid rgba(247,244,236,.7);padding:5px 12px;font-size:12px;letter-spacing:.1em;white-space:nowrap}
 .acts{display:flex;align-items:center;gap:8px;margin-top:10px}
 .add{
@@ -290,6 +306,8 @@ main{padding:0 0 128px}
   <button id="saveDefBtn">基本を保存</button>
   <button id="resetBtn">開店リセット</button>
 </div>
+<div class="takubar" id="takuBar"><span class="lbl">操作卓</span></div>
+
 <div class="tabs-wrap"><nav class="tabs" id="tabs"><div class="tabs-inner" id="tabsInner"></div></nav></div>
 
 <main id="main"></main>
@@ -386,7 +404,8 @@ if (ONLINE){
 
 /* 卓番は QR の ?t=12 から受け取る。?staff=1 で開くと最初からスタッフ用 */
 const PARAMS = new URLSearchParams(location.search);
-const TABLE = (PARAMS.get('t') || '1').trim();
+let TABLE = (PARAMS.get('t') || '1').trim();   // 操作中の卓（切り替え可）
+const TABLES = ['1','2','3','4','5','6','7','A','B','C'];
 const STAFF_APP = true;   // このファイルはスタッフ専用
 
 const MENU = [
@@ -428,8 +447,7 @@ const MENU = [
   { id:'ippin', label:'一品', items:[
     {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},
     {n:'冷やしキューリの浅漬け', p:350},{n:'おいしいラッキョ', p:300},
-    {n:'冷やしトマト', p:350},{n:'黒豆の枝豆', p:300},{n:'冷奴', p:250},
-    {n:'広島産カキフライ', p:650},{n:'厚揚げ', p:350}
+    {n:'冷やしトマト', p:350},{n:'黒豆の枝豆', p:300},{n:'冷奴', p:250}
   ]},
   { id:'motsu', label:'もつ鍋', note:'かぼす亭のもつ鍋　※二人前より承ります', items:[
     {n:'もつ鍋 一人前', p:1200, s:'二人前より承ります', min:2},
@@ -930,7 +948,7 @@ $('veil').addEventListener('click', closeAll);
 (function(){
   const title = document.querySelector('.shop');
   let timer = null;
-  const start = () => { timer = setTimeout(() => { staff = true; $('staffBar').classList.add('on'); renderTabs(); renderMenu(false); }, 1500); };
+  const start = () => { timer = setTimeout(() => { staff = true; $('staffBar').classList.add('on'); $('takuBar').classList.add('on'); renderTabs(); renderMenu(false); }, 1500); };
   const stop  = () => { clearTimeout(timer); };
   ['mousedown','touchstart'].forEach(ev => title.addEventListener(ev, start, {passive:true}));
   ['mouseup','mouseleave','touchend','touchcancel','touchmove'].forEach(ev => title.addEventListener(ev, stop, {passive:true}));
@@ -943,6 +961,45 @@ update();
 
 /* ===================== ここから通信 ===================== */
 $('seatNo').textContent = TABLE;
+
+/* 操作する卓の切り替え */
+let unsubTable = null;
+
+function watchTable(){
+  if (!ONLINE) return;
+  if (unsubTable) unsubTable();
+  unsubTable = db.collection('orders').where('table','==',TABLE).where('open','==',true)
+    .onSnapshot(snap => {
+      ordered = [];
+      snap.forEach(d => (d.data().items || []).forEach((it, i) =>
+        ordered.push({...it, _doc:d.id, _i:i})));
+      update();
+    }, err => console.error('注文の受信に失敗', err));
+}
+
+function renderTakuBar(){
+  const bar = $('takuBar');
+  bar.querySelectorAll('button').forEach(b => b.remove());
+  TABLES.forEach(t => {
+    const b = document.createElement('button');
+    b.textContent = t;
+    b.className = (t === TABLE) ? 'on' : '';
+    b.addEventListener('click', () => {
+      if (t === TABLE) return;
+      TABLE = t;
+      cart = [];                 // 未送信の注文は持ち越さない
+      ordered = [];
+      $('seatNo').textContent = TABLE;
+      renderTakuBar();
+      watchTable();
+      update();
+      showStamp('卓', `卓${TABLE} を操作中`);
+    });
+    bar.appendChild(b);
+  });
+}
+if (staff) $('takuBar').classList.add('on');
+renderTakuBar();
 
 /* ===== 注文が入ったときの音 ===== */
 let soundOn = true;
@@ -1131,14 +1188,8 @@ if (ONLINE){
     Object.entries(v).forEach(([k,n]) => stockDefault.set(k, n));
   }, err => console.error('基本数量の受信に失敗', err));
 
-  // この卓の注文済み
-  db.collection('orders').where('table','==',TABLE).where('open','==',true)
-    .onSnapshot(snap => {
-      ordered = [];
-      snap.forEach(d => (d.data().items || []).forEach((it, i) =>
-        ordered.push({...it, _doc:d.id, _i:i})));
-      update();
-    }, err => console.error('注文の受信に失敗', err));
+  // 操作中の卓の注文済み
+  watchTable();
 
   // ホール用：未提供の注文
   db.collection('orders').orderBy('at','desc').limit(150)
