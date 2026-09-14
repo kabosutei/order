@@ -1012,24 +1012,32 @@ function beep(times){
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     for (let i = 0; i < times; i++){
-      const t = audioCtx.currentTime + i * 0.42;
+      const t = audioCtx.currentTime + i * 0.48;
       const osc = audioCtx.createOscillator();
       const osc2 = audioCtx.createOscillator();
+      const osc3 = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'square';            // 倍音が多く、厨房でも通る音
-      osc2.type = 'sine';
+      const comp = audioCtx.createDynamicsCompressor();   // 歪ませずに音圧を稼ぐ
+      comp.threshold.setValueAtTime(-18, t);
+      comp.ratio.setValueAtTime(12, t);
+      osc.type = 'square';
+      osc2.type = 'square';
+      osc3.type = 'sawtooth';
       osc.frequency.setValueAtTime(880, t);
-      osc.frequency.setValueAtTime(1320, t + 0.10);
+      osc.frequency.setValueAtTime(1320, t + 0.12);
       osc2.frequency.setValueAtTime(1760, t);
-      osc2.frequency.setValueAtTime(2640, t + 0.10);
+      osc2.frequency.setValueAtTime(2640, t + 0.12);
+      osc3.frequency.setValueAtTime(440, t);
+      osc3.frequency.setValueAtTime(660, t + 0.12);
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
-      gain.gain.setValueAtTime(0.9, t + 0.26);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
-      osc.connect(gain); osc2.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(t); osc.stop(t + 0.36);
-      osc2.start(t); osc2.stop(t + 0.36);
+      gain.gain.exponentialRampToValueAtTime(3.0, t + 0.01);   // 最大音量
+      gain.gain.setValueAtTime(3.0, t + 0.30);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
+      osc.connect(gain); osc2.connect(gain); osc3.connect(gain);
+      gain.connect(comp).connect(audioCtx.destination);
+      osc.start(t); osc.stop(t + 0.40);
+      osc2.start(t); osc2.stop(t + 0.40);
+      osc3.start(t); osc3.stop(t + 0.40);
     }
   }catch(err){ console.error('音を出せません', err); }
 }
