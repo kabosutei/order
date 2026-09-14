@@ -1012,17 +1012,24 @@ function beep(times){
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     for (let i = 0; i < times; i++){
-      const t = audioCtx.currentTime + i * 0.28;
+      const t = audioCtx.currentTime + i * 0.42;
       const osc = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'sine';
+      osc.type = 'square';            // 倍音が多く、厨房でも通る音
+      osc2.type = 'sine';
       osc.frequency.setValueAtTime(880, t);
-      osc.frequency.setValueAtTime(1320, t + 0.09);
+      osc.frequency.setValueAtTime(1320, t + 0.10);
+      osc2.frequency.setValueAtTime(1760, t);
+      osc2.frequency.setValueAtTime(2640, t + 0.10);
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(t); osc.stop(t + 0.24);
+      gain.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
+      gain.gain.setValueAtTime(0.9, t + 0.26);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+      osc.connect(gain); osc2.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t); osc.stop(t + 0.36);
+      osc2.start(t); osc2.stop(t + 0.36);
     }
   }catch(err){ console.error('音を出せません', err); }
 }
