@@ -268,6 +268,62 @@ main{padding:0 0 128px}
 .fadein{animation:up .28s ease both}
 @keyframes up{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 
+/* ---------- 全卓の注文 ---------- */
+.board{position:fixed;inset:0;z-index:35;display:none;flex-direction:column;background:var(--washi)}
+.board.on{display:flex}
+.board-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px 10px;border-bottom:1px solid var(--sumi)}
+.board-title{font-family:var(--mincho);font-weight:700;font-size:20px;letter-spacing:.16em}
+.board-sum{flex:1;font-size:13px;font-weight:500;color:var(--sumi-70);letter-spacing:.04em}
+.board-body{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 14px calc(24px + env(safe-area-inset-bottom));
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-content:start;
+}
+.tcard{background:var(--washi-2);border:1px solid var(--keisen);display:flex;flex-direction:column;min-width:0}
+.tcard.is-open{border-color:var(--sumi)}
+.tcard.is-call{border:2px solid var(--shu)}
+.tcard-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:10px 12px 8px;border-bottom:1px solid var(--keisen)}
+.tcard-no{font-family:var(--mincho);font-size:13px;letter-spacing:.1em;white-space:nowrap}
+.tcard-no b{font-size:28px;letter-spacing:.02em;margin-left:3px}
+.tcard-state{font-size:13px;font-weight:700;color:var(--sumi-70);text-align:right}
+.tcard:not(.is-open) .tcard-state{color:var(--sumi-45);font-weight:500}
+.tcard-call{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--shu);color:#fff;font-size:13px;font-weight:700;letter-spacing:.06em;padding:6px 12px}
+.tcard-call.bill{background:var(--sumi)}
+.tcard-call button{border:1px solid rgba(255,255,255,.75);font-size:12px;padding:3px 9px;white-space:nowrap}
+.tcard-items{list-style:none;margin:0;padding:6px 12px;flex:1}
+.tcard-items li{display:flex;justify-content:space-between;gap:8px;font-family:var(--mincho);font-size:15px;padding:4px 0;border-bottom:1px dashed var(--keisen)}
+.tcard-items li:last-child{border-bottom:none}
+.tcard-items .wait{font-family:var(--gothic);font-size:10.5px;font-weight:700;color:var(--shu);border:1px solid var(--shu);padding:0 4px;margin-left:6px;white-space:nowrap;vertical-align:2px}
+.tcard-items .yen{color:var(--sumi-70);white-space:nowrap}
+.tcard-empty{flex:1;padding:18px 12px;text-align:center;color:var(--sumi-45);font-family:var(--mincho);font-size:14px}
+.tcard-foot{display:flex;justify-content:space-between;align-items:baseline;padding:8px 12px;border-top:1px solid var(--sumi)}
+.tcard-foot span{font-size:12px;color:var(--sumi-45)}
+.tcard-foot b{font-family:var(--mincho);font-size:22px}
+.tcard-acts{display:flex;gap:6px;padding:0 12px 12px}
+.tcard:not(.is-open) .tcard-acts{padding-top:12px}
+.tcard-acts button{flex:1;border:1px solid var(--sumi);padding:9px 0;font-family:var(--mincho);font-size:14px;letter-spacing:.08em}
+.tcard-acts button.main{background:var(--sumi);color:var(--washi)}
+
+/* ---------- 呼び出し・音 ---------- */
+.callstrip{display:none;position:sticky;top:0;z-index:26;background:var(--shu);color:#fff}
+.callstrip.on{display:block}
+.board .callstrip{position:static}
+.cs-item{display:flex;align-items:center;gap:10px;padding:8px 18px;border-bottom:1px solid rgba(255,255,255,.25);font-size:14px;font-weight:700;letter-spacing:.04em}
+.cs-item.bill{background:var(--sumi)}
+.cs-item b{font-family:var(--mincho);font-size:20px}
+.cs-item time{font-weight:400;opacity:.85;margin-left:auto}
+.cs-item button{border:1px solid rgba(255,255,255,.8);padding:5px 12px;font-size:12.5px;white-space:nowrap}
+.soundwarn{
+  display:none;position:fixed;left:0;right:0;top:0;z-index:39;pointer-events:none;   /* 重ねて出す：消えても画面がずれない */
+  background:var(--sumi);color:var(--washi);font-size:13px;padding:calc(8px + env(safe-area-inset-top)) 18px 8px;letter-spacing:.04em;
+}
+.soundwarn.on{display:block}
+.guestnums{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:6px 0 4px}
+.guestnums button{border:1px solid var(--sumi);background:var(--washi-2);padding:12px 0;font-family:var(--mincho);font-weight:700;font-size:19px}
+.guestnums button[aria-pressed="true"]{background:var(--sumi);color:var(--washi)}
+.call[disabled]{opacity:.45}
+.slip-info{font-size:13px;font-weight:500;color:var(--sumi-70);letter-spacing:.04em;padding:12px 0 4px}
+
 /* ============ 印刷（お会計伝票） ============ */
 #printArea{display:none}
 @media print{
@@ -293,7 +349,6 @@ main{padding:0 0 128px}
   <div class="head-row">
     <div class="shop">お品書き<small>STAFF ・ 表示は税抜</small></div>
     <div class="head-right">
-      <button class="callbtn" id="callBtn">店員を呼ぶ</button>
       <div class="seat">卓 <b id="seatNo">–</b></div>
     </div>
   </div>
@@ -301,11 +356,15 @@ main{padding:0 0 128px}
 
 <div class="staffbar" id="staffBar">
   <span id="staffMsg">スタッフ用</span>
+  <button id="boardBtn">全卓</button>
   <button id="soundBtn">🔔 音 入</button>
   <button id="kitchenBtn">注文一覧</button>
   <button id="saveDefBtn">基本を保存</button>
   <button id="resetBtn">開店リセット</button>
+  <button id="printTestBtn">印刷テスト</button>
 </div>
+<div class="soundwarn" id="soundWarn">音が鳴らない状態です。画面をどこか一度タップしてください。</div>
+<div class="callstrip" id="callStrip"></div>
 <div class="takubar" id="takuBar"><span class="lbl">操作卓</span></div>
 
 <div class="tabs-wrap"><nav class="tabs" id="tabs"><div class="tabs-inner" id="tabsInner"></div></nav></div>
@@ -329,21 +388,26 @@ main{padding:0 0 128px}
   <div class="slip-body" id="slipBody"></div>
 </section>
 
-<section class="slip" id="callSheet" aria-label="お呼び出し">
+<section class="slip" id="guestSheet" aria-label="入店">
   <div class="slip-head">
-    <div class="slip-title">お呼び出し</div>
-    <button class="slip-close" id="closeCall">閉じる ✕</button>
+    <div class="slip-title">入店</div>
+    <button class="slip-close" id="guestNo">やめる ✕</button>
   </div>
   <div class="slip-body">
-    <p class="call-note">メニューにない品・味の調整・アレルギーのご相談は、こちらからスタッフをお呼びください。</p>
-    <div class="callgrid" id="callGrid">
-      <button data-r="ご注文">ご注文<small>メニューにない品・数量や味の調整のご相談</small></button>
-      <button data-r="お飲み物">お飲み物のおかわり<small>おすすめもお尋ねください</small></button>
-      <button data-r="備品">取り皿・おしぼりなど</button>
-      <button data-r="お会計">お会計</button>
-      <button data-r="その他">その他のご用<small>スタッフがお伺いします</small></button>
-    </div>
+    <p class="call-note" id="guestMsg" style="font-size:15px;color:var(--sumi);line-height:1.7">—</p>
+    <div class="guestnums" id="guestNums" role="group" aria-label="人数"></div>
+    <button class="send" id="guestOk" disabled>人数を選んでください</button>
   </div>
+</section>
+
+<section class="board" id="board" aria-label="全卓の注文">
+  <div class="board-head">
+    <div class="board-title">全卓の注文</div>
+    <div class="board-sum" id="boardSum"></div>
+    <button class="slip-close" id="closeBoard">閉じる ✕</button>
+  </div>
+  <div class="callstrip" id="boardCalls"></div>
+  <div class="board-body" id="boardBody"></div>
 </section>
 
 <section class="slip" id="kitchen" aria-label="注文一覧">
@@ -408,7 +472,48 @@ let TABLE = (PARAMS.get('t') || '1').trim();   // 操作中の卓（切り替え
 const TABLES = ['1','2','3','4','5','6','7','A','B','C'];
 const STAFF_APP = true;   // このファイルはスタッフ専用
 
+/* ============================================================
+   レシートプリンター（Epson TM-m30III / ePOS-Print）
+   host    … プリンターのIPアドレス
+   cols    … 1行の文字数。80mm紙＝48、58mm紙＝32
+   drawer  … 会計時にキャッシュドロアを開けるなら true
+   この端末で自動印刷させたいときは URL に &print=1 を付ける
+   ============================================================ */
+const PRINTER = {
+  host:    'http://192.168.1.162',
+  devid:   'local_printer',
+  timeout: 10000,
+  cols:    48,
+  shop:    '本格焼鳥かぼす亭',
+  drawer:  false
+};
+const PRINT_STATION = PARAMS.get('print') === '1';
+
 const MENU = [
+  { id:'beer', label:'ビール', items:[
+    {n:'キリン一番搾り 生（中）', p:550},{n:'キリン一番搾り 生（小）', p:500},
+    {n:'キリンラガー 瓶（中）', p:550},{n:'アサヒスーパードライ 瓶（中）', p:550},
+    {n:'アサヒドライZERO 瓶（小）', p:450, s:'ノンアルコール'}
+  ]},
+  { id:'sake', label:'日本酒・焼酎', note:'焼酎は 黒霧島（芋）・島美人（芋）・白岳しろ（米）・二階堂（麦）からお選びいただけます', items:[
+    {n:'剣菱', p:480},{n:'純米酒', p:480},
+    {n:'焼酎 ロック', p:450, s:'銘柄をお選びください', opts:['黒霧島','島美人','白岳しろ','二階堂']},
+    {n:'焼酎 水割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
+    {n:'焼酎 お湯割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
+    {n:'焼酎 ソーダ割り', p:480, opts:['黒霧島','島美人','白岳しろ','二階堂']}
+  ]},
+  { id:'chuhai', label:'酎ハイ・梅酒・カクテル', items:[
+    {n:'酎ハイ カルピス', p:450},{n:'酎ハイ レモン', p:450},
+    {n:'酎ハイ ライム', p:450},{n:'酎ハイ かぼす', p:450},
+    {n:'ウーロンハイ', p:480, s:'二階堂（麦）'},
+    {n:'梅酒 ロック', p:450},{n:'梅酒 ソーダ割り', p:480},
+    {n:'カシスオレンジ', p:500},{n:'カシスウーロン', p:500},{n:'カシスかぼす', p:500},
+    {n:'ハイボール', p:500, s:'ジムビーム'},{n:'赤ワイン グラス', p:450}
+  ]},
+  { id:'soft', label:'ソフトドリンク', items:[
+    {n:'かぼすジュース', p:280},{n:'コーラ', p:250},{n:'ラムネ', p:250},
+    {n:'カルピス', p:250},{n:'ウーロン茶', p:250},{n:'オレンジ', p:250}
+  ]},
   { id:'niku', label:'肉刺し', note:'下町の懐かしい味を、毎日のごちそうに。', items:[
     {n:'ササミのタタキ刺し', p:550, def:5},
     {n:'白センマイ刺し', p:750, def:5},
@@ -445,9 +550,11 @@ const MENU = [
     {n:'チーズ巻き', p:210, def:10},{n:'にんにくの芽巻き', p:210, def:10}
   ]},
   { id:'ippin', label:'一品', items:[
+    {n:'冷奴', p:250},
+    {n:'おいしいラッキョ', p:300},{n:'黒豆の枝豆', p:300},{n:'砂ズリのコリコリポン酢', p:300},
+    {n:'冷やしキューリの浅漬け', p:350},{n:'冷やしトマト', p:350},{n:'厚揚げ', p:350},
     {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},
-    {n:'冷やしキューリの浅漬け', p:350},{n:'おいしいラッキョ', p:300},
-    {n:'冷やしトマト', p:350},{n:'黒豆の枝豆', p:300},{n:'冷奴', p:250}
+    {n:'広島産カキフライ', p:650}
   ]},
   { id:'motsu', label:'もつ鍋', note:'かぼす亭のもつ鍋　※二人前より承ります', items:[
     {n:'もつ鍋 一人前', p:1200, s:'二人前より承ります', min:2},
@@ -458,37 +565,15 @@ const MENU = [
     {n:'チーズ焼きおにぎり', p:350},{n:'焼きおにぎり', p:250},
     {n:'味噌汁', p:250},{n:'白飯', p:250}
   ]},
-  { id:'beer', label:'ビール', items:[
-    {n:'キリン一番搾り 生（中）', p:550},{n:'キリン一番搾り 生（小）', p:500},
-    {n:'キリンラガー 瓶（中）', p:550},{n:'アサヒスーパードライ 瓶（中）', p:550},
-    {n:'アサヒドライZERO 瓶（小）', p:450, s:'ノンアルコール'}
-  ]},
-  { id:'sake', label:'日本酒・焼酎', note:'焼酎は 黒霧島（芋）・島美人（芋）・白岳しろ（米）・二階堂（麦）からお選びいただけます', items:[
-    {n:'剣菱', p:480},{n:'純米酒', p:480},
-    {n:'焼酎 ロック', p:450, s:'銘柄をお選びください', opts:['黒霧島','島美人','白岳しろ','二階堂']},
-    {n:'焼酎 水割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
-    {n:'焼酎 お湯割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
-    {n:'焼酎 ソーダ割り', p:480, opts:['黒霧島','島美人','白岳しろ','二階堂']}
-  ]},
-  { id:'chuhai', label:'酎ハイ・梅酒・カクテル', items:[
-    {n:'酎ハイ カルピス', p:450},{n:'酎ハイ レモン', p:450},
-    {n:'酎ハイ ライム', p:450},{n:'酎ハイ かぼす', p:450},
-    {n:'ウーロンハイ', p:480, s:'二階堂（麦）'},
-    {n:'梅酒 ロック', p:450},{n:'梅酒 ソーダ割り', p:480},
-    {n:'カシスオレンジ', p:500},{n:'カシスウーロン', p:500},{n:'カシスかぼす', p:500},
-    {n:'ハイボール', p:500, s:'ジムビーム'},{n:'赤ワイン グラス', p:450}
-  ]},
-  { id:'soft', label:'ソフトドリンク', items:[
-    {n:'かぼすジュース', p:280},{n:'コーラ', p:250},{n:'ラムネ', p:250},
-    {n:'カルピス', p:250},{n:'ウーロン茶', p:250},{n:'オレンジ', p:250}
-  ]},
   { id:'ura', label:'裏メニュー', staffOnly:true, note:'スタッフ用でのみ表示。お客様の画面には出ません。', items:[
     {n:'焼きそば', p:600},
     {n:'焼きめし', p:600},
-    {n:'お通し キャベツ（お一人）', p:100, s:'人数分タップしてください'},
-    {n:'焼酎のセット（お一人）', p:50},
+    {n:'お通し キャベツ（お一人）', p:100, s:'入店時に人数分を自動で計上。途中で人数が増えたときの追加用'},
+    {n:'焼酎のセット', p:0, free:true, s:'人数分の金額を入れて追加'},
     {n:'炭酸水ボトル', p:300},
     {n:'ノド軟骨', p:200},
+    {n:'長谷部さん焼きおにぎり', p:400},
+    {n:'骨付きカルビ', p:600},
     {n:'その他裏メニュー', p:0, free:true, s:'メニューにない品。税抜の金額を入れて追加'},
     {n:'マイナス伝票', p:0, free:true, minus:true, s:'打ち間違いの取消。差し引く金額を入れて追加'}
   ]},
@@ -800,17 +885,27 @@ function renderSlip(){
     <div class="past">
       <div class="past-h">注 文 済 み</div>
       ${ordered.map((o, i) => `<div class="past-l"><span>${esc(o.name)}${o.taste ? ' ・' + o.taste : ''} × ${o.qty}${staff ? `<button class="cancel" data-o="${i}">取消 −1</button>` : ''}</span><span>${yen((o.price || 0) * o.qty)}</span></div>`).join('')}
-      <button class="call" id="callStaff">お会計をお願いする</button>
     </div>` : '';
 
+  const ts = tablesState.get(TABLE);
+  const isOpen = ts && ts.status === 'open';
+  const info = !ONLINE ? '' : isOpen
+    ? `<div class="slip-info">卓${esc(TABLE)}　${ts.guests || '?'}名様　${ts.openedAt ? hhmm(new Date(ts.openedAt)) + ' 入店' : ''}</div>`
+    : `<div class="slip-info">卓${esc(TABLE)} は空席です。注文を送るときに人数を伺います。</div>`;
+  const settle = ONLINE && (isOpen || ordered.length) ? '<button class="call" id="settleHere">この卓を会計する</button>' : '';
+
   $('slipBody').innerHTML = cart.length ? `
+    ${info}
     ${lines}
     ${totals()}
-    <button class="send" id="send">この内容で注文する</button>
-    ${past}` : `
+    <button class="send" id="send"${sending ? ' disabled' : ''}>${sending ? '送信しています…' : 'この内容で注文する'}</button>
+    ${past}
+    ${settle}` : `
+    ${info}
     <div class="empty">注文票はまだ空です</div>
     ${past}
-    ${ordered.length ? totals() : ''}`;
+    ${ordered.length ? totals() : ''}
+    ${settle}`;
 }
 
 $('slipBody').addEventListener('click', e => {
@@ -827,33 +922,15 @@ $('slipBody').addEventListener('click', e => {
   const cx = e.target.closest('.cancel');
   if (cx){ cancelLine(+cx.dataset.o); return; }
   if (e.target.id === 'send') sendOrder();
-  if (e.target.id === 'callStaff') requestCall('お会計');
+  if (e.target.id === 'settleHere') settleTable(TABLE);
 });
 
-function sendOrder(){
-  if (!cart.length) return;
+let sending = false;
+async function sendOrder(){
+  if (!cart.length || sending) return;
   const items = cart.map(l => ({name:l.name, taste:l.taste, base:l.base, price:l.price, qty:l.qty}));
 
-  if (ONLINE){
-    db.collection('orders').add({
-      table: TABLE, items,
-      open: true, done: false,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      at: Date.now()
-    }).catch(err => { console.error(err); showStamp('×', '通信に失敗しました'); });
-
-    // 在庫を減らす（同時注文でもずれないよう取引で処理）
-    db.runTransaction(async tx => {
-      const ref = db.collection('state').doc('stock');
-      const snap = await tx.get(ref);
-      const v = snap.data() || {};
-      const counts = {...(v.counts || {})};
-      items.forEach(it => Object.entries(usesOf(it.base)).forEach(([sk,n]) => {
-        if (counts[sk] != null) counts[sk] = Math.max(0, counts[sk] - n * it.qty);
-      }));
-      tx.set(ref, {counts, soldOut: v.soldOut || []}, {merge:true});
-    }).catch(err => console.error('在庫の更新に失敗', err));
-  } else {
+  if (!ONLINE){
     items.forEach(it => {
       Object.entries(usesOf(it.base)).forEach(([sk,n]) => {
         if (stock.has(sk)) stock.set(sk, Math.max(0, stock.get(sk) - n * it.qty));
@@ -861,20 +938,143 @@ function sendOrder(){
       const hit = ordered.find(o => o.name === it.name && o.taste === it.taste);
       if (hit) hit.qty += it.qty; else ordered.push({...it});
     });
+    cart = [];
+    closeSlip();
+    showStamp('承', 'ご注文を承りました');
+    setTimeout(update, 1500);
+    return;
   }
 
-  cart = [];
-  closeSlip();
-  showStamp('承', 'ご注文を承りました');
-  setTimeout(update, 1500);
+  const table = TABLE;
+  let session = openSessionOf(table);
+  if (!session){
+    const n = await askGuests(table);
+    if (!n){ openSlip(); return; }
+    try{ session = await openTable(table, n); }
+    catch(err){
+      console.error('入店に失敗', err);
+      showStamp('×', '入店できませんでした');
+      openSlip();
+      return;
+    }
+    if (TABLE !== table) return;
+  }
+
+  sending = true;
+  renderSlip();
+  try{
+    await placeOrder(table, session, items);
+    cart = [];
+    closeSlip();
+    showStamp('承', 'ご注文を承りました');
+    setTimeout(update, 1500);
+  }catch(err){
+    console.error('注文に失敗', err);
+    showStamp('×', err && err.message === 'CLOSED' ? '会計済みの卓です。入店からやり直してください' : '送信できませんでした');
+  }finally{
+    sending = false;
+    update();
+  }
 }
+
+/* 注文と在庫を1回の取引で書く。会計済みの卓には書かない */
+function placeOrder(table, session, items){
+  const tRef = db.collection('tables').doc(table);
+  const sRef = db.collection('state').doc('stock');
+  const oRef = db.collection('orders').doc();
+  return db.runTransaction(async tx => {
+    const t = (await tx.get(tRef)).data() || {};
+    if (t.status !== 'open' || t.session !== session) throw new Error('CLOSED');
+    const v = (await tx.get(sRef)).data() || {};
+    const counts = {...(v.counts || {})};
+    items.forEach(it => Object.entries(usesOf(it.base)).forEach(([sk,n]) => {
+      if (counts[sk] != null) counts[sk] = Math.max(0, counts[sk] - n * it.qty);
+    }));
+    tx.set(oRef, {
+      table, session, items,
+      open: true, done: false,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      at: Date.now()
+    });
+    tx.set(sRef, {counts, soldOut: v.soldOut || []}, {merge:true});
+  });
+}
+
+/* ===== 入店（人数とお通し） ===== */
+const OTOSHI = {name:'お通し キャベツ', price:100};   // お一人様・税抜
+const tablesState = new Map();   // 卓番 → {status, session, guests, openedAt, closedAt}
+let openRows = [];               // 全卓の未会計の注文
+let activeCalls = [];            // 未対応の呼び出し
+
+function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function openSessionOf(t){
+  const v = tablesState.get(String(t));
+  return v && v.status === 'open' && v.session ? v.session : null;
+}
+function otoshiItem(n){ return {name:OTOSHI.name, taste:'', base:'otoshi', price:OTOSHI.price, qty:n}; }
+
+/* 卓が空いていれば来店を作ってお通しを計上。すでに入店中ならその来店IDを返す */
+async function openTable(table, n){
+  const t = String(table);
+  const tRef = db.collection('tables').doc(t);
+  const oRef = db.collection('orders').doc();
+  const res = await db.runTransaction(async tx => {
+    const v = (await tx.get(tRef)).data() || {};
+    if (v.status === 'open' && v.session) return {session:v.session, joined:true, guests:v.guests || 0};
+    const session = newId();
+    const now = Date.now();
+    tx.set(tRef, {table:t, status:'open', session, guests:n, openedAt:now, closedAt:null});
+    tx.set(oRef, {
+      table: t, session, items: [otoshiItem(n)],
+      open: true, done: false, otoshi: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      at: now
+    });
+    return {session, joined:false};
+  });
+  tablesState.set(t, {...(tablesState.get(t) || {}), status:'open', session:res.session,
+                      guests: res.joined ? res.guests : n});
+  showStamp('入', res.joined ? `卓${t} はすでに${res.guests}名様で入店中です` : `卓${t} ${n}名様 入店`);
+  return res.session;
+}
+
+let guestResolve = null;
+let guestPick = 0;
+function askGuests(table){
+  closeAll();
+  return new Promise(res => {
+    guestResolve = res;
+    guestPick = 0;
+    $('guestMsg').textContent = `卓${table} の人数を選んでください。お通し ${yen(OTOSHI.price)} × 人数 を計上します。`;
+    renderGuestNums();
+    $('guestSheet').classList.add('on');
+    $('veil').classList.add('on');
+  });
+}
+function renderGuestNums(){
+  $('guestNums').innerHTML = Array.from({length:20}, (_, i) => i + 1)
+    .map(n => `<button data-g="${n}" aria-pressed="${n === guestPick}">${n}</button>`).join('');
+  $('guestOk').disabled = !guestPick;
+  $('guestOk').textContent = guestPick ? `${guestPick}名で入店` : '人数を選んでください';
+}
+function answerGuests(n){
+  $('guestSheet').classList.remove('on');
+  $('veil').classList.remove('on');
+  if (guestResolve){ const r = guestResolve; guestResolve = null; r(n); }
+}
+$('guestNums').addEventListener('click', e => {
+  const b = e.target.closest('[data-g]');
+  if (b){ guestPick = +b.dataset.g; renderGuestNums(); }
+});
+$('guestOk').addEventListener('click', () => { if (guestPick) answerGuests(guestPick); });
+$('guestNo').addEventListener('click', () => answerGuests(0));
 
 let askResolve = null;
 function ask(message){
+  closeAll();
   return new Promise(res => {
     askResolve = res;
     $('askMsg').textContent = message;
-    closeAll();
     $('askSheet').classList.add('on');
     $('veil').classList.add('on');
   });
@@ -897,49 +1097,15 @@ function showStamp(ch, msg){
   setTimeout(() => st.classList.remove('on'), 1500);
 }
 
-/* 店員呼び出し */
-let calling = false;
-function requestCall(reason){
-  if (calling) return;
-  calling = true;
-  closeAll();
-  if (ONLINE){
-    db.collection('calls').add({
-      table: TABLE, reason, done: false,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      at: Date.now()
-    }).catch(err => console.error('呼び出しに失敗', err));
-  }
-  showStamp('呼', `${reason}の件でお伺いします`);
-  const b = $('callBtn');
-  let left = 30;
-  b.disabled = true;
-  b.textContent = '呼び出し中';
-  const tick = setInterval(() => {
-    left--;
-    if (left <= 0){
-      clearInterval(tick);
-      calling = false;
-      b.disabled = false;
-      b.textContent = '店員を呼ぶ';
-    }
-  }, 1000);
-}
-$('callBtn').addEventListener('click', () => {
-  closeSlip();
-  $('callSheet').classList.add('on');
-  $('veil').classList.add('on');
-});
-$('closeCall').addEventListener('click', closeAll);
-$('callGrid').addEventListener('click', e => {
-  const b = e.target.closest('button[data-r]');
-  if (b) requestCall(b.dataset.r);
-});
-
 /* 開閉 */
 function openSlip(){ renderSlip(); $('slip').classList.add('on'); $('veil').classList.add('on'); }
 function closeSlip(){ $('slip').classList.remove('on'); $('veil').classList.remove('on'); }
-function closeAll(){ ['slip','callSheet','kitchen','askSheet'].forEach(k => $(k).classList.remove('on')); $('veil').classList.remove('on'); }
+function closeAll(){
+  ['slip','kitchen','askSheet','guestSheet'].forEach(k => $(k).classList.remove('on'));
+  $('veil').classList.remove('on');
+  if (askResolve){ const r = askResolve; askResolve = null; r(false); }
+  if (guestResolve){ const r = guestResolve; guestResolve = null; r(0); }
+}
 $('openSlip').addEventListener('click', openSlip);
 $('closeSlip').addEventListener('click', closeSlip);
 $('veil').addEventListener('click', closeAll);
@@ -955,6 +1121,7 @@ $('veil').addEventListener('click', closeAll);
 })();
 
 if (staff) $('staffBar').classList.add('on');
+if (PRINT_STATION) $('printTestBtn').textContent = '🖨 印刷担当';
 renderTabs();
 renderMenu(true);
 update();
@@ -977,6 +1144,19 @@ function watchTable(){
     }, err => console.error('注文の受信に失敗', err));
 }
 
+function selectTable(t){
+  t = String(t);
+  if (t === TABLE) return;
+  TABLE = t;
+  cart = [];                 // 未送信の注文は持ち越さない
+  ordered = [];
+  $('seatNo').textContent = TABLE;
+  renderTakuBar();
+  watchTable();
+  update();
+  showStamp('卓', `卓${TABLE} を操作中`);
+}
+
 function renderTakuBar(){
   const bar = $('takuBar');
   bar.querySelectorAll('button').forEach(b => b.remove());
@@ -984,17 +1164,7 @@ function renderTakuBar(){
     const b = document.createElement('button');
     b.textContent = t;
     b.className = (t === TABLE) ? 'on' : '';
-    b.addEventListener('click', () => {
-      if (t === TABLE) return;
-      TABLE = t;
-      cart = [];                 // 未送信の注文は持ち越さない
-      ordered = [];
-      $('seatNo').textContent = TABLE;
-      renderTakuBar();
-      watchTable();
-      update();
-      showStamp('卓', `卓${TABLE} を操作中`);
-    });
+    b.addEventListener('click', () => selectTable(t));
     bar.appendChild(b);
   });
 }
@@ -1006,12 +1176,18 @@ let soundOn = true;
 let audioCtx = null;
 const BOOTED = Date.now();
 
-function beep(times){
+const TONE = {
+  order: {times:2, a:880,  b:1320},   // 注文：ピピッ ×2
+  call:  {times:3, a:880,  b:1320},   // 店員呼び出し：×3
+  bill:  {times:4, a:1175, b:784}     // お会計：高→低 ×4（聞き分け用）
+};
+function beep(tone){
   if (!soundOn) return;
+  tone = tone || TONE.order;
   try{
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    for (let i = 0; i < times; i++){
+    for (let i = 0; i < tone.times; i++){
       const t = audioCtx.currentTime + i * 0.48;
       const osc = audioCtx.createOscillator();
       const osc2 = audioCtx.createOscillator();
@@ -1023,12 +1199,12 @@ function beep(times){
       osc.type = 'square';
       osc2.type = 'square';
       osc3.type = 'sawtooth';
-      osc.frequency.setValueAtTime(880, t);
-      osc.frequency.setValueAtTime(1320, t + 0.12);
-      osc2.frequency.setValueAtTime(1760, t);
-      osc2.frequency.setValueAtTime(2640, t + 0.12);
-      osc3.frequency.setValueAtTime(440, t);
-      osc3.frequency.setValueAtTime(660, t + 0.12);
+      osc.frequency.setValueAtTime(tone.a, t);
+      osc.frequency.setValueAtTime(tone.b, t + 0.12);
+      osc2.frequency.setValueAtTime(tone.a * 2, t);
+      osc2.frequency.setValueAtTime(tone.b * 2, t + 0.12);
+      osc3.frequency.setValueAtTime(tone.a / 2, t);
+      osc3.frequency.setValueAtTime(tone.b / 2, t + 0.12);
       gain.gain.setValueAtTime(0.0001, t);
       gain.gain.exponentialRampToValueAtTime(3.0, t + 0.01);   // 最大音量
       gain.gain.setValueAtTime(3.0, t + 0.30);
@@ -1045,8 +1221,148 @@ function beep(times){
 $('soundBtn').addEventListener('click', () => {
   soundOn = !soundOn;
   $('soundBtn').textContent = soundOn ? '🔔 音 入' : '🔕 音 切';
-  if (soundOn) beep(1);   // ここで端末の音声を有効化する
+  if (soundOn) beep({...TONE.order, times:1});   // ここで端末の音声を有効化する
+  syncSoundWarn();
 });
+
+/* ブラウザは一度も触られていない画面では音を出せない。最初の操作で音声を有効にする */
+function syncSoundWarn(){
+  const ready = audioCtx && audioCtx.state === 'running';
+  $('soundWarn').classList.toggle('on', soundOn && !ready);
+}
+function unlockAudio(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.onstatechange = syncSoundWarn;
+    if (audioCtx.state !== 'running') audioCtx.resume().then(syncSoundWarn, () => {});
+  }catch(err){ console.error('音声を有効にできません', err); }
+  syncSoundWarn();
+}
+['pointerdown','touchend','keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, {passive:true}));
+syncSoundWarn();
+
+/* ===== 呼び出し帯（未対応の呼び出し） ===== */
+const hhmm = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+const CALL_LABEL = {staff:'店員呼び出し', bill:'お会計'};
+function callKind(c){ return c.kind === 'bill' || c.reason === 'お会計' ? 'bill' : 'staff'; }
+
+function renderCallStrip(){
+  const html = activeCalls.map(c => `
+    <div class="cs-item${callKind(c) === 'bill' ? ' bill' : ''}">
+      <b>卓${esc(String(c.table))}</b>${CALL_LABEL[callKind(c)]}
+      <time>${hhmm(new Date(c.at || 0))}</time>
+      <button data-calldone="${c.id}">対応済み</button>
+    </div>`).join('');
+  ['callStrip','boardCalls'].forEach(id => {
+    $(id).innerHTML = html;
+    $(id).classList.toggle('on', activeCalls.length > 0);
+  });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-calldone]');
+  if (!b || !ONLINE) return;
+  db.collection('calls').doc(b.dataset.calldone).set({done:true, doneAt:Date.now()}, {merge:true})
+    .catch(err => console.error('呼び出しの更新に失敗', err));
+});
+
+/* ===== 全卓の注文 ===== */
+function tableSum(rows){
+  return rows.reduce((s, o) => s + (o.items || []).reduce((a, it) => a + (it.price || 0) * it.qty, 0), 0);
+}
+function renderBoard(){
+  if (!ONLINE){
+    $('boardSum').textContent = '';
+    $('boardBody').innerHTML = '<div class="empty">未接続のため、全卓の注文は表示できません</div>';
+    return;
+  }
+  const now = Date.now();
+  let busy = 0, total = 0;
+  const known = new Set([...TABLES, ...openRows.map(o => String(o.table))]);
+  const list = [...known].sort(tableOrder);
+
+  $('boardBody').innerHTML = list.map(t => {
+    const ts = tablesState.get(t) || {};
+    const rows = openRows.filter(o => String(o.table) === t);
+    const isOpen = ts.status === 'open' || rows.length > 0;
+    const calls = activeCalls.filter(c => String(c.table) === t);
+
+    // 同じ品をまとめる（未提供の数も数える）
+    const agg = [];
+    rows.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).forEach(o => (o.items || []).forEach(it => {
+      const key = `${it.name}|${it.taste || ''}|${it.price || 0}`;
+      let x = agg.find(y => y.key === key);
+      if (!x){ x = {key, name:it.name, taste:it.taste, price:it.price || 0, qty:0, wait:0}; agg.push(x); }
+      x.qty += it.qty;
+      if (!o.done) x.wait += it.qty;
+    }));
+    const sum = payable(tableSum(rows));
+    if (isOpen){ busy++; total += sum; }
+
+    let state = '空席';
+    if (ts.status === 'open'){
+      const min = ts.openedAt ? Math.max(0, Math.floor((now - ts.openedAt) / 60000)) : null;
+      state = `${ts.guests || '?'}名${min != null ? `・${min}分` : ''}`;
+    } else if (rows.length){
+      state = '利用中';
+    } else if (ts.status === 'closed' && ts.closedAt && now - ts.closedAt < 3 * 3600e3){
+      state = `会計済み ${hhmm(new Date(ts.closedAt))}`;
+    }
+
+    const callHtml = calls.map(c => `
+      <div class="tcard-call${callKind(c) === 'bill' ? ' bill' : ''}">
+        <span>${CALL_LABEL[callKind(c)]}　${hhmm(new Date(c.at || 0))}</span>
+        <button data-calldone="${c.id}">対応済み</button>
+      </div>`).join('');
+
+    const body = agg.length
+      ? `<ul class="tcard-items">${agg.map(x => `
+          <li><span>${esc(x.name)}${x.taste ? '・' + esc(x.taste) : ''}　${x.qty}${x.wait ? `<span class="wait">未提供 ${x.wait}</span>` : ''}</span>
+          <span class="yen">${yen(x.price * x.qty)}</span></li>`).join('')}</ul>
+         <div class="tcard-foot"><span>税込</span><b>${yen(sum)}</b></div>`
+      : (isOpen ? '<div class="tcard-empty">注文はまだありません</div>' : '');
+
+    const acts = isOpen
+      ? `<button data-pick="${esc(t)}">この卓を操作</button><button class="main" data-settle="${esc(t)}">会計する</button>`
+      : `<button data-pick="${esc(t)}">この卓を操作</button><button class="main" data-enter="${esc(t)}">入店</button>`;
+
+    return `<article class="tcard${isOpen ? ' is-open' : ''}${calls.length ? ' is-call' : ''}">
+      <header class="tcard-head"><div class="tcard-no">卓<b>${esc(t)}</b></div><div class="tcard-state">${state}</div></header>
+      ${callHtml}
+      ${body}
+      <div class="tcard-acts">${acts}</div>
+    </article>`;
+  }).join('');
+
+  $('boardSum').textContent = `利用中 ${busy}卓　未会計 計 ${yen(total)}（税込）`;
+}
+function openBoard(){ renderBoard(); $('board').classList.add('on'); }
+function closeBoard(){ $('board').classList.remove('on'); }
+$('boardBtn').addEventListener('click', openBoard);
+$('closeBoard').addEventListener('click', closeBoard);
+setInterval(() => { if ($('board').classList.contains('on')) renderBoard(); }, 60000);   // 経過時間の更新
+
+$('boardBody').addEventListener('click', async e => {
+  const pk = e.target.closest('[data-pick]');
+  if (pk){ selectTable(pk.dataset.pick); closeBoard(); return; }
+  const st = e.target.closest('[data-settle]');
+  if (st){ settleTable(st.dataset.settle); return; }
+  const en = e.target.closest('[data-enter]');
+  if (en && ONLINE){
+    const t = en.dataset.enter;
+    const n = await askGuests(t);
+    if (!n) return;
+    try{ await openTable(t, n); }
+    catch(err){ console.error('入店に失敗', err); showStamp('×', '入店できませんでした'); }
+  }
+});
+
+/* データが変わったら開いている画面を描き直す */
+function refreshViews(){
+  renderCallStrip();
+  if ($('board').classList.contains('on')) renderBoard();
+  if ($('kitchen').classList.contains('on')) renderKitchen();
+  if ($('slip').classList.contains('on')) renderSlip();
+}
 
 let kitchenRows = [];
 
@@ -1063,14 +1379,15 @@ function renderKitchen(){
     const hm = t ? `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}` : '';
     return `<div class="past" style="margin-top:14px;padding-top:12px">
       <div class="past-h">卓 ${esc(String(o.table))}　${hm}</div>
-      ${(o.items||[]).map(it => `<div class="past-l"><span>${esc(it.name)}${it.taste ? ' ・' + it.taste : ''}</span><span>× ${it.qty}</span></div>`).join('')}
+      ${(o.items||[]).map(it => `<div class="past-l"><span>${esc(it.name)}${it.taste ? '・' + esc(it.taste) : ''}　${it.qty}</span></div>`).join('')}
+      <button class="stock" data-ticket="${o.id}">注文票を印刷</button>
       <button class="call" data-done="${o.id}">提供済みにする</button>
     </div>`;
   }).join('') : '<div class="empty">未提供の注文はありません</div>';
 
   // 会計前の卓
   const byTable = {};
-  kitchenRows.filter(o => o.open).forEach(o => {
+  openRows.forEach(o => {
     const t = String(o.table);
     byTable[t] = byTable[t] || {sum:0, n:0};
     (o.items||[]).forEach(it => { byTable[t].sum += (it.price||0) * it.qty; byTable[t].n += it.qty; });
@@ -1127,8 +1444,185 @@ function tableOrder(x, y){
   return String(x).localeCompare(String(y), 'ja');
 }
 
+/* ===================== 印刷（ePOS-Print） ===================== */
+const COLS = PRINTER.cols;
+
+const xq = v => String(v).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+
+/* 全角は2文字ぶんとして桁を数える */
+function cw(v){
+  let n = 0;
+  for (const ch of String(v)){
+    const u = ch.codePointAt(0);
+    n += (u < 0x80 || (u >= 0xFF61 && u <= 0xFF9F)) ? 1 : 2;
+  }
+  return n;
+}
+/* 桁数で折り返す */
+function wrap(v, cols){
+  const out = [];
+  let line = '', n = 0;
+  for (const ch of String(v)){
+    const u = ch.codePointAt(0);
+    const w = (u < 0x80 || (u >= 0xFF61 && u <= 0xFF9F)) ? 1 : 2;
+    if (n + w > cols){ out.push(line); line = ''; n = 0; }
+    line += ch; n += w;
+  }
+  if (line) out.push(line);
+  return out;
+}
+function clip(v, max){
+  let out = '', n = 0;
+  for (const ch of String(v)){
+    const u = ch.codePointAt(0);
+    const w = (u < 0x80 || (u >= 0xFF61 && u <= 0xFF9F)) ? 1 : 2;
+    if (n + w > max) return out;
+    out += ch; n += w;
+  }
+  return out;
+}
+/* 左寄せと右寄せを1行に収める */
+function lr(left, right, cols){
+  const c = cols || COLS;
+  const l = clip(left, Math.max(0, c - cw(right) - 1));
+  return l + ' '.repeat(Math.max(1, c - cw(l) - cw(right))) + right;
+}
+const T   = v => `<text>${xq(v)}&#10;</text>`;
+const BIG = v => `<text width="2" height="2">${xq(v)}&#10;</text><text width="1" height="1"/>`;
+const RULE = (c) => T((c || '-').repeat(COLS));
+
+/* プリンターへ送る。成功しなければ例外 */
+async function eposSend(body){
+  const xml = '<?xml version="1.0" encoding="utf-8"?>' +
+    '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>' +
+    '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">' +
+    body + '</epos-print></s:Body></s:Envelope>';
+  const url = `${PRINTER.host}/cgi-bin/epos/service.cgi?devid=${PRINTER.devid}&timeout=${PRINTER.timeout}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/xml; charset=utf-8'},
+    body: xml
+  });
+  const txt = await res.text();
+  if (!/success="true"/.test(txt)) throw new Error(txt.slice(0, 300));
+  return txt;
+}
+
+/* お会計の伝票 */
+function billXml(table, items, sub, tot, stamp){
+  let b = '<text lang="ja" smooth="true"/><text align="center"/>';
+  b += BIG(PRINTER.shop);
+  b += T('お 会 計');
+  b += T(`卓 ${table}　${stamp}`);
+  b += '<text align="left"/>' + RULE();
+  b += T(lr('小計（税抜）', yen(sub)));
+  b += T(lr('消費税 10%', yen(tot - sub)));
+  b += '<feed unit="10"/>';
+  b += BIG(lr('合計', yen(tot), Math.floor(COLS / 2)));
+  b += '<feed unit="20"/><text align="center"/>';
+  b += T('10円未満切り捨て');
+  b += T('ありがとうございました');
+  b += '<feed line="2"/><cut type="feed"/>';
+  if (PRINTER.drawer) b += '<pulse drawer="drawer1" time="pulse_100"/>';
+  return b;
+}
+
+/* 厨房・ホール用の注文票 */
+function ticketXml(o){
+  const d = o.at ? new Date(o.at) : new Date();
+  const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  let b = '<text lang="ja" smooth="true"/><text align="center"/>';
+  b += BIG(`卓 ${o.table}`);
+  b += T(hm);
+  b += '<text align="left"/>' + RULE('=');
+  const half = Math.floor(COLS / 2);
+  (o.items || []).forEach(it => {
+    const nm = it.name + (it.taste ? '・' + it.taste : '');
+    const q  = '　' + it.qty;                     // 全角スペース1つ＋数量
+    let ls = wrap(nm, half);
+    if (cw(ls[ls.length - 1]) + cw(q) > half) ls = wrap(nm, half - cw(q));   // 数量が行からはみ出すときだけ詰めて折り返す
+    ls[ls.length - 1] += q;
+    ls.forEach(l => { b += BIG(l); });
+  });
+  b += RULE('=');
+  b += '<feed line="1"/><cut type="feed"/>';
+  return b;
+}
+
+const HUGE = v => `<text width="3" height="3">${xq(v)}&#10;</text><text width="1" height="1"/>`;
+
+/* 呼び出し票（店員呼び出し・お会計） */
+function callXml(c){
+  const bill = callKind(c) === 'bill';
+  let b = '<text lang="ja" smooth="true"/><text align="center"/>';
+  b += BIG(bill ? 'お 会 計' : '店員呼び出し');
+  b += '<feed unit="10"/>';
+  b += HUGE(`卓 ${c.table}`);
+  b += T(hhmm(new Date(c.at || Date.now())));
+  if (bill){
+    const t = String(c.table);
+    const g = (tablesState.get(t) || {}).guests;
+    const sub = tableSum(openRows.filter(o => String(o.table) === t));
+    b += '<text align="left"/>' + RULE();
+    if (g) b += T(lr('人数', `${g}名`));
+    b += T(lr('現在の合計（税込）', yen(payable(sub))));
+    b += RULE();
+  }
+  b += '<feed line="2"/><cut type="feed"/>';
+  return b;
+}
+
+/* 自動印刷の担当を取る。複数の端末が同じ票を出さないようにする */
+async function claimPrint(ref){
+  try{
+    return await db.runTransaction(async tx => {
+      const s = await tx.get(ref);
+      if (!s.exists || s.data().printed) return false;
+      tx.set(ref, {printed:true}, {merge:true});
+      return true;
+    });
+  }catch(err){
+    console.error('印刷の確保に失敗（そのまま印刷します）', err);
+    return true;
+  }
+}
+async function autoPrint(ref, xml, label){
+  if (!await claimPrint(ref)) return;
+  try{
+    await eposSend(xml);
+  }catch(err){
+    console.error(`${label}の印刷に失敗`, err);
+    showStamp('×', `${label}を印刷できません`);
+    ref.set({printed:false}, {merge:true}).catch(() => {});
+  }
+}
+
+/* 注文票を1枚出す。二重印刷を避けるため印刷済みを記録する */
+async function printTicket(o){
+  try{
+    await eposSend(ticketXml(o));
+    if (ONLINE && o.id) db.collection('orders').doc(o.id).set({printed:true}, {merge:true});
+  }catch(err){
+    console.error('注文票の印刷に失敗', err);
+    showStamp('×', '注文票を印刷できません');
+  }
+}
+
+async function printTest(){
+  try{
+    await eposSend('<text lang="ja" smooth="true"/><text align="center"/>' +
+      BIG('印刷テスト') + T(new Date().toLocaleString('ja-JP')) +
+      '<feed line="2"/><cut type="feed"/>');
+    showStamp('印', 'プリンターは正常です');
+  }catch(err){
+    console.error(err);
+    showStamp('×', 'プリンターに繋がりません');
+  }
+}
+
 function printBill(table){
-  const rows = kitchenRows.filter(o => o.open && String(o.table) === String(table));
+  const rows = openRows.filter(o => String(o.table) === String(table));
   const items = [];
   rows.forEach(o => (o.items||[]).forEach(it => {
     const hit = items.find(x => x.name === it.name && x.taste === it.taste);
@@ -1140,6 +1634,16 @@ function printBill(table){
   const stamp = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ` +
                 `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
+  eposSend(billXml(table, items, sub, tot, stamp))
+    .catch(err => {
+      console.error('伝票の印刷に失敗', err);
+      showStamp('×', 'プリンターに繋がりません');
+      browserBill(table, items, sub, tot, stamp);   // 予備：ブラウザ印刷
+    });
+}
+
+/* プリンターが使えないときの予備 */
+function browserBill(table, items, sub, tot, stamp){
   $('printArea').innerHTML = `<div class="rcpt">
     <h1>お 会 計</h1>
     <div class="meta">卓 ${esc(String(table))}　${stamp}</div>
@@ -1153,32 +1657,56 @@ function printBill(table){
 }
 
 async function undoSettle(ids){
-  if (!ONLINE) return;
-  if (!await ask('この会計を取り消して、注文を戻します。')) return;
+  if (!ONLINE || !ids.length) return;
+  if (!await ask('この会計を取り消して、注文を戻します。お客様の画面も注文できる状態に戻ります。')) return;
   try{
-    const batch = db.batch();
-    ids.forEach(id => batch.set(db.collection('orders').doc(id), {open:true, done:true}, {merge:true}));
-    await batch.commit();
+    await db.runTransaction(async tx => {
+      const refs = ids.map(id => db.collection('orders').doc(id));
+      const first = (await tx.get(refs[0])).data() || {};
+      const t = String(first.table);
+      const tRef = db.collection('tables').doc(t);
+      const tv = (await tx.get(tRef)).data() || {};
+      if (first.session){
+        if (tv.status === 'open' && tv.session !== first.session) throw new Error('BUSY');
+        tx.set(tRef, {table:t, status:'open', session:first.session, closedAt:null}, {merge:true});
+      }
+      refs.forEach(r => tx.set(r, {open:true, done:true}, {merge:true}));
+    });
     showStamp('戻', '会計を取り消しました');
-  }catch(err){ console.error('取消に失敗', err); showStamp('×', '取消に失敗しました'); }
+  }catch(err){
+    console.error('取消に失敗', err);
+    showStamp('×', err && err.message === 'BUSY' ? '次のお客様が入店済みのため戻せません' : '取消に失敗しました');
+  }
 }
 
 async function settleTable(table){
   if (!ONLINE) return;
-  if (!await ask(`卓${table} の伝票を印刷し、会計済みにします。`)) return;
-  printBill(table);   // 先に伝票を出してから締める
+  const t = String(table);
+  if (!await ask(`卓${t} の伝票を印刷し、会計済みにします。お客様の画面は注文できなくなり、履歴も消えます。`)) return;
+  const hasItems = openRows.some(o => String(o.table) === t && (o.items || []).length);
+  if (hasItems) printBill(t);   // 先に伝票を出してから締める
   try{
-    const snap = await db.collection('orders').where('table','==',String(table)).where('open','==',true).get();
+    const now = Date.now();
+    const snap = await db.collection('orders').where('table','==',t).where('open','==',true).get();
     const batch = db.batch();
-    snap.forEach(d => batch.set(d.ref, {open:false, done:true, closedAt:Date.now()}, {merge:true}));
+    snap.forEach(d => batch.set(d.ref, {open:false, done:true, closedAt:now}, {merge:true}));
+    batch.set(db.collection('tables').doc(t), {table:t, status:'closed', closedAt:now}, {merge:true});
+    activeCalls.filter(c => String(c.table) === t).forEach(c =>
+      batch.set(db.collection('calls').doc(c.id), {done:true, doneAt:now}, {merge:true}));
     await batch.commit();
-    showStamp('了', `卓${table} 会計済み`);
+    showStamp('了', `卓${t} 会計済み`);
   }catch(err){ console.error('会計に失敗', err); showStamp('×', '会計に失敗しました'); }
 }
 
 $('kitchenBody').addEventListener('click', e => {
   const b = e.target.closest('[data-done]');
   if (b && ONLINE){ db.collection('orders').doc(b.dataset.done).set({done:true}, {merge:true}); return; }
+  const tk = e.target.closest('[data-ticket]');
+  if (tk){
+    const row = kitchenRows.find(r => r.id === tk.dataset.ticket);
+    if (row) printTicket(row);
+    return;
+  }
   const un = e.target.closest('[data-undo]');
   if (un){ undoSettle(un.dataset.undo.split(',')); return; }
   const st = e.target.closest('[data-settle]');
@@ -1206,36 +1734,66 @@ if (ONLINE){
   // 操作中の卓の注文済み
   watchTable();
 
+  // 各卓の状態（入店中・会計済み）
+  db.collection('tables').onSnapshot(snap => {
+    tablesState.clear();
+    snap.forEach(d => tablesState.set(d.id, d.data()));
+    refreshViews();
+  }, err => console.error('卓の状態を受信できません', err));
+
+  // 全卓の未会計の注文
+  db.collection('orders').where('open','==',true).onSnapshot(snap => {
+    openRows = [];
+    snap.forEach(d => openRows.push({id:d.id, ...d.data()}));
+    refreshViews();
+  }, err => console.error('未会計の注文を受信できません', err));
+
   // ホール用：未提供の注文
   db.collection('orders').orderBy('at','desc').limit(150)
     .onSnapshot(snap => {
       snap.docChanges().forEach(ch => {
+        if (ch.type !== 'added') return;
         const v = ch.doc.data();
-        if (ch.type === 'added' && (v.at || 0) > BOOTED) beep(2);   // 注文：ピピッ
+        const at = v.at || 0;
+        if (at > BOOTED) beep(TONE.order);   // 注文：ピピッ
+        // 印刷担当は、起動前10分以内の出し損ねも拾う
+        if (PRINT_STATION && !v.printed && at > BOOTED - 10 * 60000){
+          autoPrint(ch.doc.ref, ticketXml({id:ch.doc.id, ...v}), '注文票');
+        }
       });
       kitchenRows = [];
       snap.forEach(d => kitchenRows.push({id:d.id, ...d.data()}));
       if ($('kitchen').classList.contains('on')) renderKitchen();
     }, err => console.error('注文一覧の受信に失敗', err));
 
-  // 呼び出し
-  db.collection('calls').orderBy('at','desc').limit(10)
-    .onSnapshot(snap => {
-      snap.docChanges().forEach(ch => {
-        const v = ch.doc.data();
-        if (ch.type === 'added' && !v.done && staff && v.table !== TABLE){
-          beep(3);   // 呼び出し：3回
-          showStamp('呼', `卓${v.table}：${v.reason}`);
-          db.collection('calls').doc(ch.doc.id).set({done:true}, {merge:true});
-        }
-      });
-    }, err => console.error('呼び出しの受信に失敗', err));
+  // 呼び出し（未対応のもの）
+  db.collection('calls').where('done','==',false).onSnapshot(snap => {
+    snap.docChanges().forEach(ch => {
+      if (ch.type !== 'added') return;
+      const v = ch.doc.data();
+      const at = v.at || 0;
+      const kind = callKind(v);
+      if (at > BOOTED){
+        beep(kind === 'bill' ? TONE.bill : TONE.call);
+        showStamp(kind === 'bill' ? '計' : '呼', `卓${v.table}：${CALL_LABEL[kind]}`);
+      }
+      if (PRINT_STATION && !v.printed && at > BOOTED - 3 * 60000){
+        autoPrint(ch.doc.ref, callXml({id:ch.doc.id, ...v}), '呼び出し票');
+      }
+    });
+    const since = Date.now() - 12 * 3600e3;   // 古い呼び出しは出さない
+    activeCalls = [];
+    snap.forEach(d => { const v = d.data(); if ((v.at || 0) > since) activeCalls.push({id:d.id, ...v}); });
+    activeCalls.sort((a, b) => (a.at || 0) - (b.at || 0));
+    refreshViews();
+  }, err => console.error('呼び出しの受信に失敗', err));
 } else {
   $('staffMsg').textContent = 'スタッフ用（未接続：この端末だけで動作中）';
 }
 
 
 
+$('printTestBtn').addEventListener('click', printTest);
 $('saveDefBtn').addEventListener('click', saveDefault);
 $('resetBtn').addEventListener('click', resetStock);
 
