@@ -1310,6 +1310,10 @@ function renderSales(v){
     <div class="sales-r"><span>客単価</span><span>${yen(perHead)}</span></div>
     <div class="sales-r"><span>1会計あたり</span><span>${yen(avg)}</span></div>
 
+    <div class="sales-h">卓 別</div>
+    ${v.bills.length ? v.bills.map(g => `<div class="sales-r"><span>${hhmm(new Date(g.closedAt))}　卓${esc(g.table)}<em>${g.guests ? g.guests + '名' : ''}</em></span><span>${yen(payable(g.sub))}</span></div>`).join('')
+                     : '<div class="empty">まだ会計はありません</div>'}
+
     <button class="send" id="salesPrint">この集計を印刷する</button>
     <div class="sales-note">
       0円の会計は売上に入れていません${v.zero ? `（${v.zero}件）` : ''}。<br>
@@ -1693,6 +1697,11 @@ function salesXml(v){
   b += RULE();
   b += T(lr('客単価', yen(perHead)));
   b += T(lr('1会計あたり', yen(avg)));
+
+  b += '<feed line="1"/>' + T('【 卓 別 】') + RULE();
+  v.bills.forEach(g => {
+    b += T(lr(`${hhmm(new Date(g.closedAt))} 卓${g.table}${g.guests ? ` ${g.guests}名` : ''}`, yen(payable(g.sub))));
+  });
 
   b += RULE();
   b += T(`0円の会計は除いています${v.zero ? `（${v.zero}件）` : ''}`);
