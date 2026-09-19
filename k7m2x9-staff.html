@@ -1117,7 +1117,7 @@ function showStamp(ch, msg){
 function openSlip(){ renderSlip(); $('slip').classList.add('on'); $('veil').classList.add('on'); }
 function closeSlip(){ $('slip').classList.remove('on'); $('veil').classList.remove('on'); }
 function closeAll(){
-  ['slip','kitchen','askSheet','guestSheet'].forEach(k => $(k).classList.remove('on'));
+  ['slip','kitchen','askSheet','guestSheet','sales'].forEach(k => $(k).classList.remove('on'));
   $('veil').classList.remove('on');
   if (askResolve){ const r = askResolve; askResolve = null; r(false); }
   if (guestResolve){ const r = guestResolve; guestResolve = null; r(0); }
