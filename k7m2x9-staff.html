@@ -304,6 +304,13 @@ main{padding:0 0 128px}
 .tcard-acts button{flex:1;border:1px solid var(--sumi);padding:9px 0;font-family:var(--mincho);font-size:14px;letter-spacing:.08em}
 .tcard-acts button.main{background:var(--sumi);color:var(--washi)}
 
+.sales-h{font-family:var(--mincho);font-weight:700;font-size:15px;letter-spacing:.18em;text-align:center;margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--sumi)}
+.sales-h:first-child{margin-top:4px}
+.sales-r{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:5px 0;border-bottom:1px dashed var(--keisen)}
+.sales-r.big{font-family:var(--mincho);font-size:19px;font-weight:700;border-bottom:none;padding-top:10px}
+.sales-r em{font-style:normal;color:var(--sumi-45);font-size:12px;margin-left:8px}
+.sales-note{font-size:12px;color:var(--sumi-45);line-height:1.8;margin-top:10px}
+
 /* ---------- 呼び出し・音 ---------- */
 .callstrip{display:none;position:sticky;top:0;z-index:26;background:var(--shu);color:#fff}
 .callstrip.on{display:block}
@@ -359,6 +366,7 @@ main{padding:0 0 128px}
   <button id="boardBtn">全卓</button>
   <button id="soundBtn">🔔 音 入</button>
   <button id="kitchenBtn">注文一覧</button>
+  <button id="salesBtn">売上集計</button>
   <button id="saveDefBtn">基本を保存</button>
   <button id="resetBtn">開店リセット</button>
   <button id="printTestBtn">印刷テスト</button>
@@ -398,6 +406,14 @@ main{padding:0 0 128px}
     <div class="guestnums" id="guestNums" role="group" aria-label="人数"></div>
     <button class="send" id="guestOk" disabled>人数を選んでください</button>
   </div>
+</section>
+
+<section class="slip" id="sales" aria-label="売上集計">
+  <div class="slip-head">
+    <div class="slip-title">売上集計</div>
+    <button class="slip-close" id="closeSales">閉じる ✕</button>
+  </div>
+  <div class="slip-body" id="salesBody"></div>
 </section>
 
 <section class="board" id="board" aria-label="全卓の注文">
@@ -552,7 +568,7 @@ const MENU = [
   { id:'ippin', label:'一品', items:[
     {n:'冷奴', p:250},
     {n:'おいしいラッキョ', p:300},{n:'黒豆の枝豆', p:300},{n:'砂ズリのコリコリポン酢', p:300},
-    {n:'冷やしキューリの浅漬け', p:350},{n:'冷やしトマト', p:350},{n:'厚揚げ', p:350},
+    {n:'冷やしキューリの浅漬け', p:350},{n:'冷やしトマト', p:350},{n:'厚揚げ', p:350},{n:'じゃがバター', p:350},
     {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},
     {n:'広島産カキフライ', p:650}
   ]},
@@ -1241,6 +1257,90 @@ function unlockAudio(){
 ['pointerdown','touchend','keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, {passive:true}));
 syncSoundWarn();
 
+/* ===== 売上集計 ===== */
+const DAY_START_HOUR = 6;      // 営業日の区切り（朝6時。深夜の会計は前日の売上に入れる）
+
+function dayStart(now){
+  const d = new Date(now || Date.now());
+  if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
+  d.setHours(DAY_START_HOUR, 0, 0, 0);
+  return d;
+}
+const ymd = d => `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+
+/* 締めた卓を1件ずつにまとめ、0円の会計は外す */
+async function collectSales(){
+  const from = dayStart();
+  const snap = await db.collection('orders').where('closedAt','>=',from.getTime()).get();
+  const groups = {};
+  snap.forEach(d => {
+    const o = d.data();
+    if (o.open !== false) return;
+    const g = `${o.table}-${Math.floor((o.closedAt || 0) / 60000)}`;
+    groups[g] = groups[g] || {table:String(o.table), closedAt:o.closedAt || 0, sub:0, guests:0};
+    (o.items || []).forEach(it => {
+      groups[g].sub += (it.price || 0) * it.qty;
+      if (it.base === 'otoshi') groups[g].guests += it.qty;
+    });
+  });
+
+  const all = Object.values(groups).sort((a, b) => a.closedAt - b.closedAt);
+  const bills = all.filter(g => payable(g.sub) !== 0);     // 0円の会計は売上に入れない
+  const zero = all.length - bills.length;
+
+  let sub = 0, total = 0, guests = 0;
+  bills.forEach(g => {
+    sub += g.sub;
+    total += payable(g.sub);
+    guests += g.guests;
+  });
+  return {from, bills, zero, sub, total, guests, at:new Date()};
+}
+
+function renderSales(v){
+  const avg = v.bills.length ? Math.round(v.total / v.bills.length) : 0;
+  const perHead = v.guests ? Math.round(v.total / v.guests) : 0;
+  $('salesBody').innerHTML = `
+    <div class="sales-h">${ymd(v.from)} の売上（${DAY_START_HOUR}時〜翌${DAY_START_HOUR}時）</div>
+    <div class="sales-r"><span>会計</span><span>${v.bills.length}件</span></div>
+    <div class="sales-r"><span>客数<em>お通しの数</em></span><span>${v.guests}名</span></div>
+    <div class="sales-r"><span>小計（税抜）</span><span>${yen(v.sub)}</span></div>
+    <div class="sales-r"><span>消費税・端数調整</span><span>${yen(v.total - v.sub)}</span></div>
+    <div class="sales-r big"><span>合計（税込）</span><span>${yen(v.total)}</span></div>
+    <div class="sales-r"><span>客単価</span><span>${yen(perHead)}</span></div>
+    <div class="sales-r"><span>1会計あたり</span><span>${yen(avg)}</span></div>
+
+    <button class="send" id="salesPrint">この集計を印刷する</button>
+    <div class="sales-note">
+      0円の会計は売上に入れていません${v.zero ? `（${v.zero}件）` : ''}。<br>
+      金額は税抜で集計し、会計ごとに10円未満を切り捨てた合計です。
+    </div>`;
+}
+
+let salesData = null;
+async function openSales(){
+  if (!ONLINE){ showStamp('×', '未接続のため集計できません'); return; }
+  closeAll();
+  $('salesBody').innerHTML = '<div class="empty">集計しています…</div>';
+  $('sales').classList.add('on');
+  $('veil').classList.add('on');
+  try{
+    salesData = await collectSales();
+    renderSales(salesData);
+  }catch(err){
+    console.error('売上の集計に失敗', err);
+    $('salesBody').innerHTML = '<div class="empty">集計できませんでした</div>';
+  }
+}
+$('salesBtn').addEventListener('click', openSales);
+$('closeSales').addEventListener('click', closeAll);
+$('salesBody').addEventListener('click', e => {
+  if (e.target.id !== 'salesPrint' || !salesData) return;
+  eposSend(salesXml(salesData))
+    .then(() => showStamp('印', '売上集計を印刷しました'))
+    .catch(err => { console.error('売上集計の印刷に失敗', err); showStamp('×', 'プリンターに繋がりません'); });
+});
+
 /* ===== 呼び出し帯（未対応の呼び出し） ===== */
 const hhmm = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 const CALL_LABEL = {staff:'店員呼び出し', bill:'お会計'};
@@ -1528,12 +1628,15 @@ function billXml(table, items, sub, tot, stamp){
   return b;
 }
 
+const HUGE  = v => `<text width="3" height="3">${xq(v)}&#10;</text><text width="1" height="1"/>`;
+const GIANT = v => `<text width="4" height="4">${xq(v)}&#10;</text><text width="1" height="1"/>`;   // 厨房票の卓番
+
 /* 厨房・ホール用の注文票 */
 function ticketXml(o){
   const d = o.at ? new Date(o.at) : new Date();
   const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   let b = '<text lang="ja" smooth="true"/><text align="center"/>';
-  b += BIG(`卓 ${o.table}`);
+  b += GIANT(`卓 ${o.table}`);
   b += T(hm);
   b += '<text align="left"/>' + RULE('=');
   const half = Math.floor(COLS / 2);
@@ -1549,8 +1652,6 @@ function ticketXml(o){
   b += '<feed line="1"/><cut type="feed"/>';
   return b;
 }
-
-const HUGE = v => `<text width="3" height="3">${xq(v)}&#10;</text><text width="1" height="1"/>`;
 
 /* 呼び出し票（店員呼び出し・お会計） */
 function callXml(c){
@@ -1570,6 +1671,32 @@ function callXml(c){
     b += RULE();
   }
   b += '<feed line="2"/><cut type="feed"/>';
+  return b;
+}
+
+/* 売上集計のロール */
+function salesXml(v){
+  const avg = v.bills.length ? Math.round(v.total / v.bills.length) : 0;
+  const perHead = v.guests ? Math.round(v.total / v.guests) : 0;
+  let b = '<text lang="ja" smooth="true"/><text align="center"/>';
+  b += BIG(PRINTER.shop);
+  b += T('売 上 集 計');
+  b += T(`${ymd(v.from)}（${DAY_START_HOUR}時〜翌${DAY_START_HOUR}時）`);
+  b += T(`出力 ${ymd(v.at)} ${hhmm(v.at)}`);
+  b += '<text align="left"/>' + RULE();
+  b += T(lr('会計', `${v.bills.length}件`));
+  b += T(lr('客数（お通し）', `${v.guests}名`));
+  b += T(lr('小計（税抜）', yen(v.sub)));
+  b += T(lr('消費税・端数調整', yen(v.total - v.sub)));
+  b += RULE();
+  b += BIG(lr('合計', yen(v.total), Math.floor(COLS / 2)));
+  b += RULE();
+  b += T(lr('客単価', yen(perHead)));
+  b += T(lr('1会計あたり', yen(avg)));
+
+  b += RULE();
+  b += T(`0円の会計は除いています${v.zero ? `（${v.zero}件）` : ''}`);
+  b += '<feed line="3"/><cut type="feed"/>';
   return b;
 }
 
