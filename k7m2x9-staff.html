@@ -1636,15 +1636,36 @@ const HUGE  = v => `<text width="3" height="3">${xq(v)}&#10;</text><text width="
 const GIANT = v => `<text width="4" height="4">${xq(v)}&#10;</text><text width="1" height="1"/>`;   // 厨房票の卓番
 
 /* 厨房・ホール用の注文票 */
-function ticketXml(o){
+/* ドリンクの判定。カテゴリで分け、裏メニューは品名で拾う */
+const DRINK_CATS  = ['beer','sake','chuhai','soft','bottle'];
+const DRINK_WORDS = ['炭酸水', '焼酎のセット'];
+function isDrink(it){
+  const cat = String(it.base || '').split('-')[0];
+  if (DRINK_CATS.includes(cat)) return true;
+  return DRINK_WORDS.some(w => (it.name || '').includes(w));
+}
+
+/* 1件の注文を、ドリンク票とフード票に分ける。片方だけならその1枚 */
+function ticketsOf(o){
+  const items = o.items || [];
+  const drink = items.filter(isDrink);
+  const food  = items.filter(it => !isDrink(it));
+  const out = [];
+  if (drink.length) out.push({label:'ド リ ン ク', xml:ticketXml(o, drink, 'ド リ ン ク')});
+  if (food.length)  out.push({label:'フ ー ド',   xml:ticketXml(o, food,  'フ ー ド')});
+  return out;
+}
+
+function ticketXml(o, items, label){
   const d = o.at ? new Date(o.at) : new Date();
   const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   let b = '<text lang="ja" smooth="true"/><text align="center"/>';
   b += GIANT(`卓 ${o.table}`);
+  b += BIG(label || '');
   b += T(hm);
   b += '<text align="left"/>' + RULE('=');
   const half = Math.floor(COLS / 2);
-  (o.items || []).forEach(it => {
+  (items || o.items || []).forEach(it => {
     const nm = it.name + (it.taste ? '・' + it.taste : '');
     const q  = '　' + it.qty;                     // 全角スペース1つ＋数量
     let ls = wrap(nm, half);
@@ -1726,7 +1747,7 @@ async function claimPrint(ref){
 async function autoPrint(ref, xml, label){
   if (!await claimPrint(ref)) return;
   try{
-    await eposSend(xml);
+    for (const x of [].concat(xml)) await eposSend(x);
   }catch(err){
     console.error(`${label}の印刷に失敗`, err);
     showStamp('×', `${label}を印刷できません`);
@@ -1737,7 +1758,7 @@ async function autoPrint(ref, xml, label){
 /* 注文票を1枚出す。二重印刷を避けるため印刷済みを記録する */
 async function printTicket(o){
   try{
-    await eposSend(ticketXml(o));
+    for (const t of ticketsOf(o)) await eposSend(t.xml);
     if (ONLINE && o.id) db.collection('orders').doc(o.id).set({printed:true}, {merge:true});
   }catch(err){
     console.error('注文票の印刷に失敗', err);
@@ -1894,7 +1915,7 @@ if (ONLINE){
         if (at > BOOTED) beep(TONE.order);   // 注文：ピピッ
         // 印刷担当は、起動前10分以内の出し損ねも拾う
         if (PRINT_STATION && !v.printed && at > BOOTED - 10 * 60000){
-          autoPrint(ch.doc.ref, ticketXml({id:ch.doc.id, ...v}), '注文票');
+          autoPrint(ch.doc.ref, ticketsOf({id:ch.doc.id, ...v}).map(t => t.xml), '注文票');
         }
       });
       kitchenRows = [];
