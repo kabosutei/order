@@ -371,6 +371,15 @@ if (ONLINE){
 
 /* 卓番は QR の ?t=12 から受け取る。?staff=1 で開くと最初から店舗モード */
 const PARAMS = new URLSearchParams(location.search);
+/* QRから開いたか。目印はすぐアドレスから消すので、履歴やタブから開き直すと無くなる */
+const FROM_QR = PARAMS.get('qr') === '1';
+if (FROM_QR){
+  try{
+    const u = new URL(location.href);
+    u.searchParams.delete('qr');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }catch(err){ console.error('アドレスを整えられません', err); }
+}
 const TABLE = (PARAMS.get('t') || '1').trim();
 const STAFF_APP = false;  // このファイルはお客様専用
 
@@ -866,11 +875,12 @@ update();
 
 /* ===================== 入店・会計済みの管理 ===================== */
 const OTOSHI = {name:'お通し キャベツ', price:100};    // お一人様・税抜
-const LOCK_MS = 2 * 60 * 60 * 1000;                     // 会計後この時間は、同じ端末を「会計済み」のままにする
+let dayClose = 0;                                       // 店が「本日を締めた」時刻。これより後に会計した端末は会計済みのまま
 const MINE_KEY = `kabosu-visit-${TABLE}`;
 let SESSION = null;            // この端末が参加している来店ID
 let tableState = null;         // tables/{卓} の中身
 let tableLoaded = !ONLINE;
+let dayLoaded = !ONLINE;
 let openDocs = [];             // この卓の未会計の注文（全来店分）
 let pickGuests = 0;
 
@@ -883,26 +893,27 @@ function otoshiItem(n){ return {name:OTOSHI.name, taste:'', base:'otoshi', price
 /* いまの卓の状態と、この端末の記録から、出す画面を決める */
 function decide(){
   if (!ONLINE) return SESSION ? joinSession(SESSION) : showGate('entry');
-  if (!tableLoaded) return showGate('loading');
+  if (!tableLoaded || !dayLoaded) return showGate('loading');
   const t = tableState || {};
   const isOpen = t.status === 'open' && !!t.session;
   const mine = loadMine();
 
   if (mine && mine.session === t.session){
     if (isOpen) return joinSession(t.session);
-    const ended = t.closedAt || Date.now();          // この端末の来店が会計済み
-    if (Date.now() - ended < LOCK_MS){
+    const ended = t.closedAt || mine.seen || Date.now();   // この端末の来店が会計済み
+    if (ended > dayClose){                                  // 店が締めるまでは会計済みのまま
       if (!mine.ended) saveMine({...mine, ended});
       return lockOut();
     }
     saveMine(null);
   } else if (mine){
     // 記録にある来店は終わっている（次のお客様が入店済み）
-    const last = Math.max(mine.seen || 0, mine.ended || 0);
-    if (Date.now() - last < LOCK_MS) return lockOut();
+    const ended = Math.max(mine.seen || 0, mine.ended || 0);
+    if (ended > dayClose) return lockOut();
     saveMine(null);
   }
   leaveSession();
+  if (!FROM_QR) return showGate('scan');      // 履歴やタブから開いた場合
   showGate(isOpen ? 'join' : 'entry');
 }
 
@@ -943,10 +954,13 @@ function rebuildOrdered(){
 function gateHtml(mode){
   const seat = `<div class="gate-seat" id="gateSeat">卓 <b>${esc(TABLE)}</b></div>`;
   if (mode === 'loading') return `${seat}<p class="gate-lead">読み込んでいます</p>`;
+  if (mode === 'scan') return `${seat}
+    <p class="gate-lead">席のQRコードを<br>読み取ってください</p>
+    <p class="gate-note">ご注文は、テーブルのQRコードから始めてください。<br>読み取れないときは、スタッフにお声がけください。</p>`;
   if (mode === 'locked') return `${seat}
     <div class="gate-seal">済</div>
     <p class="gate-lead">お会計が済みました</p>
-    <p class="gate-note">ご来店ありがとうございました。<br>続けてご注文の際は、スタッフにお声がけください。</p>`;
+    <p class="gate-note">ご来店ありがとうございました。<br>ご注文の際は、スタッフにお声がけください。</p>`;
   if (mode === 'join'){
     const g = (tableState || {}).guests;
     return `${seat}
@@ -1066,6 +1080,17 @@ if (ONLINE){
     (v.soldOut || []).forEach(k => soldOut.add(k));
     update();
   }, err => console.error('在庫の受信に失敗', err));
+
+  // 店の締め時刻
+  db.collection('state').doc('day').onSnapshot(d => {
+    dayClose = (d.exists ? d.data().closedAt : 0) || 0;
+    dayLoaded = true;
+    decide();
+  }, err => {
+    console.error('締め時刻を受信できません', err);
+    dayLoaded = true;
+    decide();
+  });
 
   // この卓の状態（入店中・会計済み）
   db.collection('tables').doc(TABLE).onSnapshot(d => {

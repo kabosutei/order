@@ -1314,11 +1314,53 @@ function renderSales(v){
     ${v.bills.length ? v.bills.map(g => `<div class="sales-r"><span>${hhmm(new Date(g.closedAt))}　卓${esc(g.table)}<em>${g.guests ? g.guests + '名' : ''}</em></span><span>${yen(payable(g.sub))}</span></div>`).join('')
                      : '<div class="empty">まだ会計はありません</div>'}
 
-    <button class="send" id="salesPrint">この集計を印刷する</button>
+    <button class="send" id="salesPrint">この集計を印刷して締める</button>
+    <button class="call" id="closeDayBtn">印刷せずに締める</button>
     <div class="sales-note">
       0円の会計は売上に入れていません${v.zero ? `（${v.zero}件）` : ''}。<br>
-      金額は税抜で集計し、会計ごとに10円未満を切り捨てた合計です。
+      金額は税抜で集計し、会計ごとに10円未満を切り捨てた合計です。<br>
+      締めると、お客様の会計済み表示が解除され、在庫は基本数量に戻ります。<br>
+      締めるまでは、会計済みのスマホから注文は入りません。
     </div>`;
+}
+
+/* 本日を締める：全端末の会計済み表示を解除し、在庫を基本数量に戻す */
+function busyTables(){
+  return [...new Set([
+    ...[...tablesState.entries()].filter(([, v]) => v.status === 'open').map(([t]) => t),
+    ...openRows.map(o => String(o.table))
+  ])].sort(tableOrder);
+}
+
+async function closeDay(confirm = true){
+  if (!ONLINE) return false;
+  const busy = busyTables();
+  if (busy.length){
+    showStamp('×', `未会計の卓があります（卓${busy.join('・卓')}）`);
+    return false;
+  }
+  if (!stockDefault.size){ showStamp('？', '先に基本数量を保存してください'); return false; }
+  if (confirm && !await ask('本日を締めます。お客様の会計済み表示が解除され、在庫は基本数量に戻ります。')) return false;
+
+  try{
+    const now = Date.now();
+    const batch = db.batch();
+    batch.set(db.collection('state').doc('day'), {closedAt:now}, {merge:true});
+    stock.clear();
+    stockDefault.forEach((v, k) => stock.set(k, v));
+    soldOut.clear();
+    batch.set(db.collection('state').doc('stock'), {counts:Object.fromEntries(stock), soldOut:[]});
+    activeCalls.forEach(c => batch.set(db.collection('calls').doc(c.id), {done:true, doneAt:now}, {merge:true}));
+    await batch.commit();
+    update();
+    closeAll();
+    showStamp('締', '本日を締めました');
+    return true;
+  }catch(err){
+    console.error('締めに失敗', err);
+    showStamp('×', '締められませんでした');
+    return false;
+  }
 }
 
 let salesData = null;
@@ -1338,12 +1380,32 @@ async function openSales(){
 }
 $('salesBtn').addEventListener('click', openSales);
 $('closeSales').addEventListener('click', closeAll);
-$('salesBody').addEventListener('click', e => {
+$('salesBody').addEventListener('click', async e => {
+  if (e.target.id === 'closeDayBtn'){ closeDay(); return; }
   if (e.target.id !== 'salesPrint' || !salesData) return;
-  eposSend(salesXml(salesData))
-    .then(() => showStamp('印', '売上集計を印刷しました'))
-    .catch(err => { console.error('売上集計の印刷に失敗', err); showStamp('×', 'プリンターに繋がりません'); });
+
+  const busy = busyTables();
+  if (busy.length){
+    // 未会計の卓が残っているときは締めず、集計だけ出す
+    if (!await ask(`未会計の卓があります（卓${busy.join('・卓')}）。締めずに集計だけ印刷しますか。`)) return;
+    printSales();
+    return;
+  }
+  if (!await ask('この集計を印刷して、本日を締めます。お客様の会計済み表示が解除され、在庫は基本数量に戻ります。')) return;
+  if (await printSales()) closeDay(false);     // 印刷できたときだけ締める
 });
+
+async function printSales(){
+  try{
+    await eposSend(salesXml(salesData));
+    showStamp('印', '売上集計を印刷しました');
+    return true;
+  }catch(err){
+    console.error('売上集計の印刷に失敗', err);
+    showStamp('×', 'プリンターに繋がりません');
+    return false;
+  }
+}
 
 /* ===== 呼び出し帯（未対応の呼び出し） ===== */
 const hhmm = d => `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
