@@ -460,6 +460,10 @@ const MENU = [
     {n:'味噌汁', p:250},{n:'白飯', p:250}
   ]},
   { id:'bottle', label:'ボトルキープ', note:'キープ期間 3ヶ月', items:[
+    {n:'ロックセット', p:0, set:'ロック', s:'人数×¥50（初回のみ頂戴します）'},
+    {n:'水割りセット', p:0, set:'水割り', s:'人数×¥50（初回のみ頂戴します）'},
+    {n:'お湯割りセット', p:0, set:'お湯割り', s:'人数×¥50（初回のみ頂戴します）'},
+    {n:'炭酸水ボトル', p:300},
     {n:'黒霧島', p:2300},{n:'黒島美人', p:2500},{n:'島美人', p:2500},
     {n:'二階堂', p:2500},{n:'白岳しろ', p:2500},{n:'赤霧島', p:2900}
   ]}
@@ -566,7 +570,7 @@ function row(c, it, i){
       <div class="item-body">
         <div class="item-main">
           <div class="item-name">${esc(it.n)}${flag}</div>
-          <div class="item-price">${yen(it.p)}</div>
+          <div class="item-price">${it.set ? `人数×${yen(SET_UNIT)}` : yen(it.p)}</div>
         </div>
         ${it.s ? `<div class="item-sub">${esc(it.s)}</div>` : ''}
         ${acts}
@@ -629,13 +633,30 @@ $('main').addEventListener('click', e => {
     renderMenu(false);
     return;
   }
-  const taste = b.dataset.taste || '';
+  const taste = it.set || b.dataset.taste || '';
   const key = `${base}${taste ? '-' + taste : ''}`;
   const line = cart.find(l => l.key === key);
-  if (line) line.qty++;
+  if (it.set){
+    // 焼酎セットは1つずつ。金額は人数×50円を初回だけ
+    if (!line) cart.push({key, base, name:SET_NAME, taste, price:0, qty:1, min:1});
+  } else if (line) line.qty++;
   else cart.push({key, base:`${c.id}-${b.dataset.i}`, name:it.n, taste, price:it.p, qty:it.min || 1, min:it.min || 1});
   update();
 });
+
+/* 焼酎セット：人数×50円を、その来店の初回だけ頂く */
+const SET_NAME = '焼酎セット';
+const SET_UNIT = 50;
+function guestsNow(){ return (tableState || {}).guests || 0; }
+function repriceSets(){
+  let charged = ordered.some(o => o.name === SET_NAME && (o.price || 0) > 0);
+  cart.forEach(l => {
+    if (l.name !== SET_NAME) return;
+    if (charged){ l.price = 0; return; }
+    l.price = guestsNow() * SET_UNIT;
+    if (l.price > 0) charged = true;
+  });
+}
 
 /* 合計・件数の反映 */
 const TAX = 0.10;
@@ -651,6 +672,7 @@ function syncCounts(){
   });
 }
 function update(){
+  repriceSets();
   renderMenu(false);
   $('barYen').textContent = yen(payable(billSub()));
   $('bar').classList.toggle('on', cart.length > 0 || ordered.length > 0);
