@@ -192,10 +192,19 @@ main{padding:0 0 128px}
 .bar-sum{flex:1;min-width:0}
 .bar-lbl{font-size:10.5px;letter-spacing:.24em;color:rgba(247,244,236,.6)}
 .bar-yen{font-family:var(--mincho);font-weight:700;font-size:25px;letter-spacing:.02em;line-height:1.25}
-.bar-btn{
+.bar-btn,.bar-see{
   font-family:var(--mincho);font-weight:700;font-size:17px;letter-spacing:.16em;
-  background:var(--washi);color:var(--sumi);padding:12px 22px;
+  background:var(--washi);color:var(--sumi);padding:12px 22px;white-space:nowrap;
 }
+/* 未送信の注文があるとき */
+.bar.pending{background:var(--shu)}
+.bar.pending .bar-lbl{color:rgba(255,253,248,.92);font-size:12px;letter-spacing:.12em}
+.bar.pending .bar-see{
+  background:none;color:var(--washi);border:1px solid rgba(247,244,236,.7);
+  font-weight:500;font-size:13px;letter-spacing:.06em;padding:9px 11px;
+}
+#barSend{display:none}
+.bar.pending #barSend{display:block}
 
 /* ---------- 注文票 ---------- */
 .veil{position:fixed;inset:0;z-index:40;background:rgba(21,18,15,.5);opacity:0;pointer-events:none;transition:opacity .24s ease}
@@ -381,10 +390,11 @@ main{padding:0 0 128px}
 
 <div class="bar" id="bar">
   <div class="bar-sum">
-    <div class="bar-lbl">GOCHUMON ・ 税込</div>
+    <div class="bar-lbl" id="barLbl">GOCHUMON ・ 税込</div>
     <div class="bar-yen" id="barYen">¥0</div>
   </div>
-  <button class="bar-btn" id="openSlip">注文票を見る</button>
+  <button class="bar-see" id="openSlip">注文票を見る</button>
+  <button class="bar-btn" id="barSend">注文する</button>
 </div>
 
 <div class="veil" id="veil"></div>
@@ -596,7 +606,7 @@ const MENU = [
     {n:'ロックセット', p:0, set:'ロック', s:'人数×¥50（初回のみ頂戴します）'},
     {n:'水割りセット', p:0, set:'水割り', s:'人数×¥50（初回のみ頂戴します）'},
     {n:'お湯割りセット', p:0, set:'お湯割り', s:'人数×¥50（初回のみ頂戴します）'},
-    {n:'炭酸水ボトル', p:300},
+    {n:'炭酸水ボトル', p:300, setToo:true, s:'初回は焼酎セット（人数×¥50）も頂戴します'},
     {n:'黒霧島', p:2300},{n:'黒島美人', p:2500},{n:'島美人', p:2500},
     {n:'二階堂', p:2500},{n:'白岳しろ', p:2500},{n:'赤霧島', p:2900}
   ]}
@@ -826,7 +836,8 @@ $('main').addEventListener('click', e => {
     // 焼酎セットは1つずつ。金額は人数×50円を初回だけ
     if (!line) cart.push({key, base, name:SET_NAME, taste, price:0, qty:1, min:1});
   } else if (line) line.qty++;
-  else cart.push({key, base:`${c.id}-${b.dataset.i}`, name:it.n, taste, price:it.p, qty:it.min || 1, min:it.min || 1});
+  else cart.push({key, base:`${c.id}-${b.dataset.i}`, name:it.n, taste, price:it.p, qty:it.min || 1, min:it.min || 1, setToo:!!it.setToo});
+  if (it.setToo) addSetLine();
   update();
 });
 
@@ -834,6 +845,16 @@ $('main').addEventListener('click', e => {
 const SET_NAME = '焼酎セット';
 const SET_UNIT = 50;
 function guestsNow(){ return (tablesState.get(TABLE) || {}).guests || 0; }
+/* 炭酸水ボトルなど、焼酎セットが付く品を頼んだときに1行足す */
+function addSetLine(){
+  const paid = ordered.some(o => o.name === SET_NAME && (o.price || 0) > 0);
+  if (paid || cart.some(l => l.name === SET_NAME)) return;   // すでに頂いている
+  cart.push({key:'bottle-set', base:'bottle-set', name:SET_NAME, taste:'', price:0, qty:1, min:1, auto:true});
+}
+/* 付けた品が注文票から消えたら、自動の焼酎セットも下げる */
+function syncAutoSet(){
+  if (!cart.some(l => l.setToo)) cart = cart.filter(l => !l.auto);
+}
 function repriceSets(){
   let charged = ordered.some(o => o.name === SET_NAME && (o.price || 0) > 0);
   cart.forEach(l => {
@@ -858,10 +879,15 @@ function syncCounts(){
   });
 }
 function update(){
+  syncAutoSet();
   repriceSets();
   renderMenu(false);
   $('barYen').textContent = yen(payable(billSub()));
+  const waiting = cart.reduce((s2, l) => s2 + l.qty, 0);        // まだ送っていない点数
   $('bar').classList.toggle('on', cart.length > 0 || ordered.length > 0);
+  $('bar').classList.toggle('pending', waiting > 0);
+  $('barLbl').textContent = waiting ? `未送信 ${waiting}点` : 'GOCHUMON ・ 税込';
+  $('openSlip').textContent = waiting ? '内容を見る' : '注文票を見る';
   if ($('slip').classList.contains('on')) renderSlip();
 }
 
@@ -1144,6 +1170,7 @@ function closeAll(){
   if (guestResolve){ const r = guestResolve; guestResolve = null; r(0); }
 }
 $('openSlip').addEventListener('click', openSlip);
+$('barSend').addEventListener('click', sendOrder);
 $('closeSlip').addEventListener('click', closeSlip);
 $('veil').addEventListener('click', closeAll);
 
@@ -1719,23 +1746,29 @@ const HUGE  = v => `<text width="3" height="3">${xq(v)}&#10;</text><text width="
 const GIANT = v => `<text width="4" height="4">${xq(v)}&#10;</text><text width="1" height="1"/>`;   // 厨房票の卓番
 
 /* 厨房・ホール用の注文票 */
-/* ドリンクの判定。カテゴリで分け、裏メニューは品名で拾う */
+/* 票の振り分け。カテゴリで分け、裏メニューは品名で拾う */
 const DRINK_CATS  = ['beer','sake','chuhai','soft','bottle'];
-const DRINK_WORDS = ['炭酸水', '焼酎のセット'];
-function isDrink(it){
-  const cat = String(it.base || '').split('-')[0];
-  if (DRINK_CATS.includes(cat)) return true;
-  return DRINK_WORDS.some(w => (it.name || '').includes(w));
+const DRINK_WORDS = ['炭酸水', '焼酎のセット', '焼酎セット'];
+const KUSHI_CATS  = ['tori','buta','gensen','yasai','maki'];
+const KUSHI_WORDS = ['ノド軟骨'];                    // 裏メニューの串
+function groupOf(it){
+  const cat  = String(it.base || '').split('-')[0];
+  const name = it.name || '';
+  if (DRINK_CATS.includes(cat) || DRINK_WORDS.some(w => name.includes(w))) return 'drink';
+  if (KUSHI_CATS.includes(cat) || KUSHI_WORDS.some(w => name.includes(w))) return 'kushi';
+  return 'food';
 }
+function isDrink(it){ return groupOf(it) === 'drink'; }
 
-/* 1件の注文を、ドリンク票とフード票に分ける。片方だけならその1枚 */
+/* 1件の注文を、ドリンク・串・料理の3枚に分ける。無い分は出さない */
+const TICKET_GROUPS = [['drink','ド リ ン ク'], ['kushi','串 も の'], ['food','料 理']];
 function ticketsOf(o){
   const items = o.items || [];
-  const drink = items.filter(isDrink);
-  const food  = items.filter(it => !isDrink(it));
   const out = [];
-  if (drink.length) out.push({label:'ド リ ン ク', xml:ticketXml(o, drink, 'ド リ ン ク')});
-  if (food.length)  out.push({label:'フ ー ド',   xml:ticketXml(o, food,  'フ ー ド')});
+  TICKET_GROUPS.forEach(([g, label]) => {
+    const list = items.filter(it => groupOf(it) === g);
+    if (list.length) out.push({label, xml:ticketXml(o, list, label)});
+  });
   return out;
 }
 
