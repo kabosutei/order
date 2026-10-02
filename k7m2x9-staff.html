@@ -1249,6 +1249,7 @@ function beep(tone){
   if (!soundOn) return;
   tone = tone || TONE.order;
   try{
+    if (audioCtx && audioCtx.state === 'closed') audioCtx = null;
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     for (let i = 0; i < tone.times; i++){
@@ -1285,9 +1286,20 @@ function beep(tone){
 $('soundBtn').addEventListener('click', () => {
   soundOn = !soundOn;
   $('soundBtn').textContent = soundOn ? '🔔 音 入' : '🔕 音 切';
-  if (soundOn) beep({...TONE.order, times:1});   // ここで端末の音声を有効化する
+  if (soundOn){
+    rebuildAudio();                              // 音が出なくなったときは、ここで作り直す
+    beep({...TONE.order, times:1});
+  }
   syncSoundWarn();
 });
+
+/* 音の仕組みを作り直す。鳴らなくなったときの立て直し */
+function rebuildAudio(){
+  try{ if (audioCtx) audioCtx.close(); }catch(err){ console.error('音声を閉じられません', err); }
+  audioCtx = null;
+  audioMark = {t:0, at:0};
+  unlockAudio();
+}
 
 /* ブラウザは一度も触られていない画面では音を出せない。最初の操作で音声を有効にする */
 function syncSoundWarn(){
@@ -1304,6 +1316,25 @@ function unlockAudio(){
 }
 ['pointerdown','touchend','keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, {passive:true}));
 syncSoundWarn();
+
+/* 音の見張り。時計が進んでいなければ止まっているので、作り直す */
+let audioMark = {t:0, at:0};
+function audioWatch(){
+  if (!soundOn || !audioCtx || audioCtx.state === 'closed') return;
+  const now = Date.now();
+  if (audioCtx.state !== 'running'){
+    audioCtx.resume().then(syncSoundWarn, () => {});
+    syncSoundWarn();
+    return;
+  }
+  if (audioMark.at && now - audioMark.at > 5000 && audioCtx.currentTime <= audioMark.t){
+    console.warn('音が止まっているため作り直します');
+    rebuildAudio();
+    return;
+  }
+  audioMark = {t:audioCtx.currentTime, at:now};
+}
+setInterval(audioWatch, 20000);
 
 /* ===== 売上集計 ===== */
 const DAY_START_HOUR = 6;      // 営業日の区切り（朝6時。深夜の会計は前日の売上に入れる）
@@ -1898,10 +1929,11 @@ function printBill(table){
   const rows = openRows.filter(o => String(o.table) === String(table));
   const items = [];
   rows.forEach(o => (o.items||[]).forEach(it => {
-    const hit = items.find(x => x.name === it.name && x.taste === it.taste);
+    // 単価まで同じものだけまとめる（焼酎セットのように同じ品名で金額が違う行があるため）
+    const hit = items.find(x => x.name === it.name && x.taste === it.taste && (x.price||0) === (it.price||0));
     if (hit) hit.qty += it.qty; else items.push({...it});
   }));
-  const sub = items.reduce((s,it) => s + (it.price||0) * it.qty, 0);
+  const sub = tableSum(rows);          // 全卓画面と必ず同じ出し方にする
   const tot = payable(sub);
   const now = new Date();
   const stamp = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ` +
