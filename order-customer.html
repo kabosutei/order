@@ -222,6 +222,13 @@ main{padding:0 0 128px}
 .slip-title{font-family:var(--mincho);font-weight:700;font-size:19px;letter-spacing:.2em}
 .slip-close{font-size:13px;letter-spacing:.1em;color:var(--sumi-45)}
 .slip-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 20px 20px}
+/* 送信ボタンは常に見える位置に固定する（スクロールしない） */
+.slip-foot{
+  flex:none;border-top:1px solid var(--sumi);background:var(--washi-2);
+  padding:12px 20px calc(12px + env(safe-area-inset-bottom));
+}
+.slip-foot:empty{display:none}
+.slip-foot .send{margin-top:0}
 
 .line{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px dashed var(--keisen)}
 .line-name{flex:1;min-width:0;font-family:var(--mincho);font-weight:700;font-size:17.5px;letter-spacing:.02em}
@@ -337,6 +344,7 @@ body.gated{overflow:hidden}
     <button class="slip-close" id="closeSlip">閉じる ✕</button>
   </div>
   <div class="slip-body" id="slipBody"></div>
+  <div class="slip-foot" id="slipFoot"></div>
 </section>
 
 <div class="gate" id="gate" role="dialog" aria-modal="true" aria-label="ご案内">
@@ -465,7 +473,7 @@ const MENU = [
     {n:'冷奴', p:250},
     {n:'おいしいラッキョ', p:300},{n:'黒豆の枝豆', p:300},{n:'砂ズリのコリコリポン酢', p:300},
     {n:'冷やしキューリの浅漬け', p:350},{n:'冷やしトマト', p:350},{n:'厚揚げ', p:350},{n:'じゃがバター', p:350},
-    {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},
+    {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},{n:'ギンナン', p:500},
     {n:'広島産カキフライ', p:650}
   ]},
   { id:'motsu', label:'もつ鍋', note:'かぼす亭のもつ鍋　※二人前より承ります', items:[
@@ -695,6 +703,7 @@ function syncCounts(){
 function update(){
   syncAutoSet();
   repriceSets();
+  saveCart();
   renderMenu(false);
   $('barYen').textContent = yen(payable(billSub()));
   const waiting = cart.reduce((s2, l) => s2 + l.qty, 0);        // まだ送っていない点数
@@ -769,16 +778,19 @@ function renderSlip(){
   $('slipBody').innerHTML = cart.length ? `
     ${lines}
     ${totals()}
-    <button class="send" id="send"${sending ? ' disabled' : ''}>${sending ? '送信しています…' : 'この内容で注文する'}</button>
     ${past}
     ${billBtn}` : `
     <div class="empty">注文票はまだ空です</div>
     ${past}
     ${ordered.length ? totals() : ''}
     ${billBtn}`;
+  $('slipFoot').innerHTML = cart.length
+    ? `<button class="send" id="send"${sending ? ' disabled' : ''}>${sending ? '送信しています…' : 'この内容で注文する'}</button>`
+    : '';
   syncCallButtons();
 }
 
+$('slipFoot').addEventListener('click', e => { if (e.target.id === 'send') sendOrder(); });
 $('slipBody').addEventListener('click', e => {
   const s = e.target.closest('.step button');
   if (s){
@@ -797,6 +809,16 @@ $('slipBody').addEventListener('click', e => {
 });
 
 let sending = false;
+let pendingOrderId = null;      // 送り直しても同じ注文を2件作らないための番号
+
+/* 一定時間で見切りをつける。電波が不安定なときに止まったままにしない */
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+  ]);
+}
+
 async function sendOrder(){
   if (!cart.length || !SESSION || sending) return;
   const items = cart.map(l => ({name:l.name, taste:l.taste, base:l.base, price:l.price, qty:l.qty}));
@@ -819,7 +841,9 @@ async function sendOrder(){
   sending = true;
   renderSlip();
   try{
-    await placeOrder(items);
+    pendingOrderId = pendingOrderId || newId();
+    await withTimeout(placeOrder(items, pendingOrderId), 12000);
+    pendingOrderId = null;
     cart = [];
     touchMine();
     closeSlip();
@@ -827,7 +851,8 @@ async function sendOrder(){
     setTimeout(update, 1500);
   }catch(err){
     console.error('注文に失敗', err);
-    if (err && err.message === 'CLOSED') showStamp('済', 'お会計済みのため注文できません');
+    if (err && err.message === 'TIMEOUT') showStamp('信', '電波が不安定です。もう一度お試しください');
+    else if (err && err.message === 'CLOSED') showStamp('済', 'お会計済みのため注文できません');
     else showStamp('×', '送信できませんでした。もう一度お試しください');
   }finally{
     sending = false;
@@ -836,10 +861,10 @@ async function sendOrder(){
 }
 
 /* 注文と在庫を1回の取引で書く。会計済みの卓には書かない */
-function placeOrder(items){
+function placeOrder(items, orderId){
   const tRef = db.collection('tables').doc(TABLE);
   const sRef = db.collection('state').doc('stock');
-  const oRef = db.collection('orders').doc();
+  const oRef = db.collection('orders').doc(orderId);
   return db.runTransaction(async tx => {
     const t = (await tx.get(tRef)).data() || {};
     if (t.status !== 'open' || t.session !== SESSION) throw new Error('CLOSED');
@@ -926,6 +951,7 @@ update();
 const OTOSHI = {name:'お通し キャベツ', price:100};    // お一人様・税抜
 let dayClose = 0;                                       // 店が「本日を締めた」時刻。これより後に会計した端末は会計済みのまま
 const MINE_KEY = `kabosu-visit-${TABLE}`;
+const CART_KEY = `kabosu-cart-${TABLE}`;      // まだ送っていない注文票
 let SESSION = null;            // この端末が参加している来店ID
 let tableState = null;         // tables/{卓} の中身
 let tableLoaded = !ONLINE;
@@ -937,6 +963,23 @@ function newId(){ return Date.now().toString(36) + Math.random().toString(36).sl
 function loadMine(){ try{ return JSON.parse(localStorage.getItem(MINE_KEY) || 'null'); }catch(e){ return null; } }
 function saveMine(v){ try{ v ? localStorage.setItem(MINE_KEY, JSON.stringify(v)) : localStorage.removeItem(MINE_KEY); }catch(e){} }
 function touchMine(){ const m = loadMine(); if (m && m.session === SESSION) saveMine({...m, seen:Date.now()}); }
+
+/* 未送信の注文票を端末に残す。画面を消したり他のアプリに移っても消えないように */
+function saveCart(){
+  try{
+    if (!SESSION) return;                      // 来店が決まる前は触らない
+    if (cart.length) localStorage.setItem(CART_KEY, JSON.stringify({session:SESSION, at:Date.now(), cart}));
+    else localStorage.removeItem(CART_KEY);
+  }catch(err){}
+}
+function loadCart(){
+  try{
+    const v = JSON.parse(localStorage.getItem(CART_KEY) || 'null');
+    if (!v || v.session !== SESSION || !Array.isArray(v.cart)) return;
+    if (Date.now() - (v.at || 0) > 6 * 3600e3) return;    // 古すぎるものは戻さない
+    cart = v.cart;
+  }catch(err){}
+}
 function otoshiItem(n){ return {name:OTOSHI.name, taste:'', base:'otoshi', price:OTOSHI.price, qty:n}; }
 
 /* いまの卓の状態と、この端末の記録から、出す画面を決める */
@@ -970,7 +1013,10 @@ function joinSession(s){
   const changed = SESSION !== s;
   SESSION = s;
   saveMine({session:s, seen:Date.now()});
-  if (changed) rebuildOrdered();
+  if (changed){
+    loadCart();          // 読み込み直す前に選んでいた品を戻す
+    rebuildOrdered();
+  }
   hideGate();
 }
 function leaveSession(){

@@ -225,6 +225,13 @@ main{padding:0 0 128px}
 .slip-title{font-family:var(--mincho);font-weight:700;font-size:19px;letter-spacing:.2em}
 .slip-close{font-size:13px;letter-spacing:.1em;color:var(--sumi-45)}
 .slip-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 20px 20px}
+/* 送信ボタンは常に見える位置に固定する（スクロールしない） */
+.slip-foot{
+  flex:none;border-top:1px solid var(--sumi);background:var(--washi-2);
+  padding:12px 20px calc(12px + env(safe-area-inset-bottom));
+}
+.slip-foot:empty{display:none}
+.slip-foot .send{margin-top:0}
 
 .line{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px dashed var(--keisen)}
 .line-name{flex:1;min-width:0;font-family:var(--mincho);font-weight:700;font-size:17.5px;letter-spacing:.02em}
@@ -404,6 +411,7 @@ main{padding:0 0 128px}
     <button class="slip-close" id="closeSlip">閉じる ✕</button>
   </div>
   <div class="slip-body" id="slipBody"></div>
+  <div class="slip-foot" id="slipFoot"></div>
 </section>
 
 <section class="slip" id="guestSheet" aria-label="入店">
@@ -587,7 +595,7 @@ const MENU = [
     {n:'冷奴', p:250},
     {n:'おいしいラッキョ', p:300},{n:'黒豆の枝豆', p:300},{n:'砂ズリのコリコリポン酢', p:300},
     {n:'冷やしキューリの浅漬け', p:350},{n:'冷やしトマト', p:350},{n:'厚揚げ', p:350},{n:'じゃがバター', p:350},
-    {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},
+    {n:'ポテトフライ', p:400},{n:'にらとじ', p:450},{n:'ギンナン', p:500},
     {n:'広島産カキフライ', p:650}
   ]},
   { id:'motsu', label:'もつ鍋', note:'かぼす亭のもつ鍋　※二人前より承ります', items:[
@@ -961,7 +969,6 @@ function renderSlip(){
     ${info}
     ${lines}
     ${totals()}
-    <button class="send" id="send"${sending ? ' disabled' : ''}>${sending ? '送信しています…' : 'この内容で注文する'}</button>
     ${past}
     ${settle}` : `
     ${info}
@@ -969,8 +976,12 @@ function renderSlip(){
     ${past}
     ${ordered.length ? totals() : ''}
     ${settle}`;
+  $('slipFoot').innerHTML = cart.length
+    ? `<button class="send" id="send"${sending ? ' disabled' : ''}>${sending ? '送信しています…' : 'この内容で注文する'}</button>`
+    : '';
 }
 
+$('slipFoot').addEventListener('click', e => { if (e.target.id === 'send') sendOrder(); });
 $('slipBody').addEventListener('click', e => {
   const s = e.target.closest('.step button');
   if (s){
@@ -989,6 +1000,16 @@ $('slipBody').addEventListener('click', e => {
 });
 
 let sending = false;
+let pendingOrderId = null;      // 送り直しても同じ注文を2件作らないための番号
+
+/* 一定時間で見切りをつける。電波が不安定なときに止まったままにしない */
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+  ]);
+}
+
 async function sendOrder(){
   if (!cart.length || sending) return;
   const items = cart.map(l => ({name:l.name, taste:l.taste, base:l.base, price:l.price, qty:l.qty}));
@@ -1026,14 +1047,18 @@ async function sendOrder(){
   sending = true;
   renderSlip();
   try{
-    await placeOrder(table, session, items);
+    pendingOrderId = pendingOrderId || newId();
+    await withTimeout(placeOrder(table, session, items, pendingOrderId), 12000);
+    pendingOrderId = null;
     cart = [];
     closeSlip();
     showStamp('承', 'ご注文を承りました');
     setTimeout(update, 1500);
   }catch(err){
     console.error('注文に失敗', err);
-    showStamp('×', err && err.message === 'CLOSED' ? '会計済みの卓です。入店からやり直してください' : '送信できませんでした');
+    showStamp('×', err && err.message === 'TIMEOUT' ? '電波が不安定です。もう一度お試しください'
+            : err && err.message === 'CLOSED' ? '会計済みの卓です。入店からやり直してください'
+            : '送信できませんでした');
   }finally{
     sending = false;
     update();
@@ -1041,10 +1066,10 @@ async function sendOrder(){
 }
 
 /* 注文と在庫を1回の取引で書く。会計済みの卓には書かない */
-function placeOrder(table, session, items){
+function placeOrder(table, session, items, orderId){
   const tRef = db.collection('tables').doc(table);
   const sRef = db.collection('state').doc('stock');
-  const oRef = db.collection('orders').doc();
+  const oRef = db.collection('orders').doc(orderId);
   return db.runTransaction(async tx => {
     const t = (await tx.get(tRef)).data() || {};
     if (t.status !== 'open' || t.session !== session) throw new Error('CLOSED');
