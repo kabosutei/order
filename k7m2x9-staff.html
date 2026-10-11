@@ -1056,7 +1056,12 @@ async function sendOrder(){
     setTimeout(update, 1500);
   }catch(err){
     console.error('注文に失敗', err);
-    showStamp('×', err && err.message === 'TIMEOUT' ? '電波が不安定です。もう一度お試しください'
+    if (err && err.message === 'SOLDOUT'){
+      const names = err.names || [];
+      cart = cart.filter(l => !names.includes(l.name));      // 頼めない品は注文票から外す
+      showStamp('了', `${names[0]}${names.length > 1 ? ' ほか' : ''}は在庫切れです。在庫を増やすか販売を再開してください`);
+    }
+    else showStamp('×', err && err.message === 'TIMEOUT' ? '電波が不安定です。もう一度お試しください'
             : err && err.message === 'CLOSED' ? '会計済みの卓です。入店からやり直してください'
             : '送信できませんでした');
   }finally{
@@ -1075,9 +1080,27 @@ function placeOrder(table, session, items, orderId){
     if (t.status !== 'open' || t.session !== session) throw new Error('CLOSED');
     const v = (await tx.get(sRef)).data() || {};
     const counts = {...(v.counts || {})};
-    items.forEach(it => Object.entries(usesOf(it.base)).forEach(([sk,n]) => {
-      if (counts[sk] != null) counts[sk] = Math.max(0, counts[sk] - n * it.qty);
-    }));
+    const gone = new Set((v.soldOut || []));
+
+    // 送る直前に在庫を確かめる。足りなければ受け付けない
+    const need = {};
+    const short = new Set();
+    items.forEach(it => {
+      if (gone.has(it.base)) short.add(it.name);
+      Object.entries(usesOf(it.base)).forEach(([sk, n]) => { need[sk] = (need[sk] || 0) + n * it.qty; });
+    });
+    Object.entries(need).forEach(([sk, n]) => {
+      if (counts[sk] == null || counts[sk] >= n) return;
+      items.forEach(it => { if (usesOf(it.base)[sk]) short.add(it.name); });
+    });
+    if (short.size){
+      const err = new Error('SOLDOUT');
+      err.names = [...short];
+      throw err;
+    }
+    Object.entries(need).forEach(([sk, n]) => {
+      if (counts[sk] != null) counts[sk] = Math.max(0, counts[sk] - n);
+    });
     tx.set(oRef, {
       table, session, items,
       open: true, done: false,
