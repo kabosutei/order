@@ -530,7 +530,7 @@ const MENU = [
     {n:'アサヒドライZERO 瓶（小）', p:450, s:'ノンアルコール'}
   ]},
   { id:'sake', label:'日本酒・焼酎', note:'焼酎は 黒霧島（芋）・島美人（芋）・白岳しろ（米）・二階堂（麦）からお選びいただけます', items:[
-    {n:'剣菱', p:480},{n:'純米酒', p:480},
+    {n:'剣菱', p:480, opts:['熱燗','冷酒']},{n:'純米酒', p:480, opts:['熱燗','冷酒']},
     {n:'焼酎 ロック', p:450, s:'銘柄をお選びください', opts:['黒霧島','島美人','白岳しろ','二階堂']},
     {n:'焼酎 水割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
     {n:'焼酎 お湯割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
@@ -1076,6 +1076,7 @@ function placeOrder(table, session, items, orderId){
   const sRef = db.collection('state').doc('stock');
   const oRef = db.collection('orders').doc(orderId);
   return db.runTransaction(async tx => {
+    if ((await tx.get(oRef)).exists) return;      // すでに入っている注文。在庫を二重に引かない
     const t = (await tx.get(tRef)).data() || {};
     if (t.status !== 'open' || t.session !== session) throw new Error('CLOSED');
     const v = (await tx.get(sRef)).data() || {};

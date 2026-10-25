@@ -408,7 +408,7 @@ const MENU = [
     {n:'アサヒドライZERO 瓶（小）', p:450, s:'ノンアルコール'}
   ]},
   { id:'sake', label:'日本酒・焼酎', note:'焼酎は 黒霧島（芋）・島美人（芋）・白岳しろ（米）・二階堂（麦）からお選びいただけます', items:[
-    {n:'剣菱', p:480},{n:'純米酒', p:480},
+    {n:'剣菱', p:480, opts:['熱燗','冷酒']},{n:'純米酒', p:480, opts:['熱燗','冷酒']},
     {n:'焼酎 ロック', p:450, s:'銘柄をお選びください', opts:['黒霧島','島美人','白岳しろ','二階堂']},
     {n:'焼酎 水割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
     {n:'焼酎 お湯割り', p:400, opts:['黒霧島','島美人','白岳しろ','二階堂']},
@@ -841,7 +841,7 @@ async function sendOrder(){
   sending = true;
   renderSlip();
   try{
-    pendingOrderId = pendingOrderId || newId();
+    if (!pendingOrderId){ pendingOrderId = newId(); saveCart(); }
     await withTimeout(placeOrder(items, pendingOrderId), 12000);
     pendingOrderId = null;
     cart = [];
@@ -871,6 +871,7 @@ function placeOrder(items, orderId){
   const sRef = db.collection('state').doc('stock');
   const oRef = db.collection('orders').doc(orderId);
   return db.runTransaction(async tx => {
+    if ((await tx.get(oRef)).exists) return;      // すでに入っている注文。在庫を二重に引かない
     const t = (await tx.get(tRef)).data() || {};
     if (t.status !== 'open' || t.session !== SESSION) throw new Error('CLOSED');
     const v = (await tx.get(sRef)).data() || {};
@@ -991,7 +992,7 @@ function touchMine(){ const m = loadMine(); if (m && m.session === SESSION) save
 function saveCart(){
   try{
     if (!SESSION) return;                      // 来店が決まる前は触らない
-    if (cart.length) localStorage.setItem(CART_KEY, JSON.stringify({session:SESSION, at:Date.now(), cart}));
+    if (cart.length) localStorage.setItem(CART_KEY, JSON.stringify({session:SESSION, at:Date.now(), cart, pendingOrderId}));
     else localStorage.removeItem(CART_KEY);
   }catch(err){}
 }
@@ -1001,6 +1002,7 @@ function loadCart(){
     if (!v || v.session !== SESSION || !Array.isArray(v.cart)) return;
     if (Date.now() - (v.at || 0) > 6 * 3600e3) return;    // 古すぎるものは戻さない
     cart = v.cart;
+    pendingOrderId = v.pendingOrderId || null;           // 送りかけの注文番号も戻す（二重注文を防ぐ）
   }catch(err){}
 }
 function otoshiItem(n){ return {name:OTOSHI.name, taste:'', base:'otoshi', price:OTOSHI.price, qty:n}; }
