@@ -362,6 +362,9 @@ main{padding:0 0 128px}
 .rcpt .r span:first-child{flex:1;min-width:0}
 .rcpt .big{font-size:19px;font-weight:700;padding-top:4px}
 .rcpt .foot{text-align:center;font-size:10.5px;margin-top:12px;letter-spacing:.08em}
+/* 印刷待ちがあるとき：赤く点滅 */
+.staffbar button.printwait{background:#c62828 !important;color:#fff !important;border-color:#c62828 !important;animation:pwblink 1s steps(2,start) infinite}
+@keyframes pwblink{to{opacity:.55}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -521,7 +524,9 @@ const PRINTER = {
   shop:    '本格焼鳥かぼす亭',
   drawer:  false
 };
-const PRINT_STATION = PARAMS.get('print') === '1';
+// 印刷担当：?print=1 か、店のMac（localhost）で開いたとき
+const PRINT_STATION = PARAMS.get('print') === '1' ||
+  ['localhost', '127.0.0.1'].includes(location.hostname);
 
 const MENU = [
   { id:'beer', label:'ビール', items:[
@@ -1793,12 +1798,18 @@ async function eposSend(body){
     '<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">' +
     body + '</epos-print></s:Body></s:Envelope>';
   const url = `${PRINTER.host}/cgi-bin/epos/service.cgi?devid=${PRINTER.devid}&timeout=${PRINTER.timeout}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/xml; charset=utf-8'},
-    body: xml
-  });
-  const txt = await res.text();
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), PRINTER.timeout + 8000);   // 返事が無いままにしない
+  let txt;
+  try{
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/xml; charset=utf-8'},
+      body: xml,
+      signal: ac.signal
+    });
+    txt = await res.text();
+  } finally { clearTimeout(timer); }
   if (!/success="true"/.test(txt)) throw new Error(txt.slice(0, 300));
   return txt;
 }
@@ -1940,16 +1951,70 @@ async function claimPrint(ref){
     return true;
   }
 }
-async function autoPrint(ref, xml, label){
-  if (!await claimPrint(ref)) return;
+/* ===== 自動印刷の待ち行列 =====
+   ロール交換中・再起動中・プリンターの電源が切れている間に入った票は、
+   印刷できるようになった時点で古い順にまとめて出す。 */
+const PRINT_RETRY_MS  = 8000;          // 失敗したらこの間隔で再挑戦
+const ORDER_BACK_MS   = 12 * 3600e3;   // 起動時に拾い直す範囲（注文）
+const CALL_BACK_MS    = 30 * 60000;    // 起動時に拾い直す範囲（呼び出し）
+let dayClosedAt = 0;                   // 締めた時刻。これより前の票は出さない
+let callRows = [];                     // 未対応の呼び出し（全件）
+let dayLoaded = false;                 // 締めの時刻を受け取るまでは出さない
+let printBusy = false, printAgain = false, printFailing = false, printTimer = null;
+
+function printQueue(){
+  const now = Date.now();
+  const q = [];
+  kitchenRows.forEach(o => {
+    const at = o.at || 0;
+    if (o.printed || o.open === false) return;          // 印刷済み・会計済みは出さない
+    if (at < now - ORDER_BACK_MS || at < dayClosedAt) return;
+    q.push({at, ref:db.collection('orders').doc(o.id), xml:ticketsOf(o).map(t => t.xml), label:'注文票'});
+  });
+  callRows.forEach(c => {
+    const at = c.at || 0;
+    if (c.printed || c.done) return;
+    if (at < now - CALL_BACK_MS || at < dayClosedAt) return;
+    q.push({at, ref:db.collection('calls').doc(c.id), xml:[callXml(c)], label:'呼び出し票'});
+  });
+  return q.sort((a, b) => a.at - b.at);
+}
+
+function showPrintWait(n){
+  const btn = $('printTestBtn');
+  if (!btn) return;
+  btn.textContent = n ? `🖨 印刷待ち ${n}` : '🖨 印刷担当';
+  btn.classList.toggle('printwait', !!n);
+}
+
+async function sweepPrint(){
+  if (!PRINT_STATION || !ONLINE || !dayLoaded) return;
+  if (printBusy){ printAgain = true; return; }   // 印刷中に来た分は終わってすぐ出す
+  printBusy = true; printAgain = false;
+  clearTimeout(printTimer); printTimer = null;
   try{
-    for (const x of [].concat(xml)) await eposSend(x);
-  }catch(err){
-    console.error(`${label}の印刷に失敗`, err);
-    showStamp('×', `${label}を印刷できません`);
-    ref.set({printed:false}, {merge:true}).catch(() => {});
+    for (const job of printQueue()){
+      if (!await claimPrint(job.ref)) continue;
+      try{
+        for (const x of job.xml) await eposSend(x);
+      }catch(err){
+        console.error(`${job.label}の印刷に失敗（あとで自動で出し直します）`, err);
+        await job.ref.set({printed:false}, {merge:true}).catch(() => {});
+        if (!printFailing) showStamp('×', 'プリンターを確認してください。直ったら自動で印刷します');
+        printFailing = true;
+        break;                         // 出せない間は順番を崩さず待つ
+      }
+      printFailing = false;
+    }
+  } finally {
+    printBusy = false;
+    const left = printQueue().length;
+    showPrintWait(printFailing ? left : 0);
+    if (left) printTimer = setTimeout(sweepPrint, printFailing || !printAgain ? PRINT_RETRY_MS : 0);
   }
 }
+// 念のため定期的にも確認（スリープ明けなど）
+if (PRINT_STATION) setInterval(sweepPrint, 30000);
 
 /* 注文票を1枚出す。二重印刷を避けるため印刷済みを記録する */
 async function printTicket(o){
@@ -1968,6 +2033,7 @@ async function printTest(){
       BIG('印刷テスト') + T(new Date().toLocaleString('ja-JP')) +
       '<feed line="2"/><cut type="feed"/>');
     showStamp('印', 'プリンターは正常です');
+    sweepPrint();   // 印刷待ちがあれば続けて出す
   }catch(err){
     console.error(err);
     showStamp('×', 'プリンターに繋がりません');
@@ -2095,6 +2161,13 @@ if (ONLINE){
     refreshViews();
   }, err => console.error('卓の状態を受信できません', err));
 
+  // 締めた時刻（これより前の票は自動印刷しない）
+  db.collection('state').doc('day').onSnapshot(d => {
+    dayClosedAt = (d.exists && d.data().closedAt) || 0;
+    dayLoaded = true;
+    sweepPrint();
+  }, err => { console.error('締めの状態を受信できません', err); dayLoaded = true; });
+
   // 全卓の未会計の注文
   db.collection('orders').where('open','==',true).onSnapshot(snap => {
     openRows = [];
@@ -2110,14 +2183,11 @@ if (ONLINE){
         const v = ch.doc.data();
         const at = v.at || 0;
         if (at > BOOTED) beep(TONE.order);   // 注文：ピピッ
-        // 印刷担当は、起動前10分以内の出し損ねも拾う
-        if (PRINT_STATION && !v.printed && at > BOOTED - 10 * 60000){
-          autoPrint(ch.doc.ref, ticketsOf({id:ch.doc.id, ...v}).map(t => t.xml), '注文票');
-        }
       });
       kitchenRows = [];
       snap.forEach(d => kitchenRows.push({id:d.id, ...d.data()}));
       if ($('kitchen').classList.contains('on')) renderKitchen();
+      sweepPrint();   // 未印刷の票があれば古い順に出す
     }, err => console.error('注文一覧の受信に失敗', err));
 
   // 呼び出し（未対応のもの）
@@ -2131,10 +2201,10 @@ if (ONLINE){
         beep(kind === 'bill' ? TONE.bill : TONE.call);
         showStamp(kind === 'bill' ? '計' : '呼', `卓${v.table}：${CALL_LABEL[kind]}`);
       }
-      if (PRINT_STATION && !v.printed && at > BOOTED - 3 * 60000){
-        autoPrint(ch.doc.ref, callXml({id:ch.doc.id, ...v}), '呼び出し票');
-      }
     });
+    callRows = [];
+    snap.forEach(d => callRows.push({id:d.id, ...d.data()}));
+    sweepPrint();
     const since = Date.now() - 12 * 3600e3;   // 古い呼び出しは出さない
     activeCalls = [];
     snap.forEach(d => { const v = d.data(); if ((v.at || 0) > since) activeCalls.push({id:d.id, ...v}); });
